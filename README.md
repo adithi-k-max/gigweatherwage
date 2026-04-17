@@ -4,7 +4,7 @@
 
 Gig workers face daily risks ranging from extreme weather (floods, heatwaves) to sudden account disruptions. **GigWeatherWage** acts as a safety net, allowing workers to access income protection via an affordable weekly subscription, powered by dynamic, actuarial AI modeling.
 
-🔗 **[Pitch Deck / Demo Presentation](https://docs.google.com/presentation/d/1em0YyKVoCn9rdBJ41fln3bBYue1_Eb-MPITB5wzVuNg/edit?usp=sharing)**
+🔗 **[Pitch Deck / Demo Presentation](https://docs.google.com/presentation/d/1tS19UGPB0KvrrfY8T5RTAiPD1c2QSDupe12ODg9A8ig/edit?slide=id.p1#slide=id.p1)**
 
 ---
 
