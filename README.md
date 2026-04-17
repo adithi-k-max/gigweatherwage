@@ -1,110 +1,59 @@
-# GigWeatherWage
+# 🌩️ GigWeatherWage
 
-AI-powered weather-risk insurance experience for gig workers.
+**An intelligent micro-insurance and financial SaaS platform designed exclusively for gig workers and daily wage earners.**
 
-## Live App
+Gig workers face daily risks ranging from extreme weather (floods, heatwaves) to sudden account disruptions. **GigWeatherWage** acts as a safety net, allowing workers to access income protection via an affordable weekly subscription, powered by dynamic, actuarial AI modeling.
 
-- Production URL: https://gigweatherwage.vercel.app
+---
 
-## Current Status
+## 🔥 Features Added & Ready for Hackathon Submission
 
-This repository is now only for `gigweatherwage`.
-All previous FSAD temporary project traces were removed.
+1. **Modern Premium UI Wrap (Tailwind CSS)**
+   - Transformed the entire user interface using injected Tailwind UI layouts. Home, Claims, Payments, Alerts, and Profile all feature pristine, mobile-first card aesthetics.
 
-## What Is Implemented
+2. **Secure Razorpay Payment Integration (Test Mode)**
+   - Fully implemented Razorpay API flows. Subscriptions/Weekly premiums successfully execute order creation via our secure custom backend (`/api/razorpay-order`) and map to frontend checkouts.
 
-- React single-page app (`create-react-app`)
-- Firebase Authentication integration
-- Registration with:
-  - Name
-  - Username
-  - Phone
-  - Email
-  - Password + Confirm Password
-  - City + Zone
-- Login using **Username or Email** + Password
-- Password visibility (eye toggle) on auth forms
-- Forgot password using Firebase reset email
-- Dynamic city/zone weather monitor in Alerts tab
-- Dynamic premium calculations based on:
-  - City risk
-  - Zone factor
-  - Platform factor
-  - Plan/work profile
-- Automatic premium adjustment on city/zone change:
-  - Increased risk -> `pendingPremiumDue`
-  - Decreased risk -> `billingCredit`
-- Payments flow includes due settlement using available credit
-- Profile edit flow for:
-  - Name
-  - Username
-  - Email
-  - City
-  - Zone
-  - Password
-- Account controls:
-  - Logout
-  - Pause/Resume account
-  - Delete account
-  - Support action (`support@devtrails.com`)
+3. **Intelligent Claim Engine with GPS Tracking**
+   - Claims are now hard-linked to subscription status (blocked if unpaid). 
+   - Instant GPS location capturing validates whether the worker is physically present in the claimed anomaly zone.
 
-## Weather Data
+4. **Automated Fraud Detection Pipeline**
+   - Implemented dynamic maturity-gate fraud validation to automatically block claims from accounts less than 7 days old, flag accounts pending maturity, and auto-approve genuine historic accounts.
 
-The Alerts city weather fetch uses Open-Meteo APIs:
+5. **Advanced Insurer Admin Dashboard**
+   - Complete analytics view showing Active Workers, Total Premium, Payouts, and the critical **Benefit-Cost Ratio (BCR)** ensuring actuarial and systematic economic sustainability.
+   - Rain/Anomaly Simulation tools to instantly trigger broad insurance events for demoing purposes.
 
-- Geocoding API to resolve city coordinates
-- Forecast API for weather snapshot
-- Air quality API for AQI signals
+6. **Cross-Platform Mobile Demo Architecture**
+   - Built a custom **Flutter Mobile App wrapper** (`gigweatherwage_mobile`) that flawlessly wraps our React PWA/Vercel instance into standard Android Apps (`.apk`) providing a native, hardware-accelerated experience dynamically linked to live deployments.
 
-## Tech Stack
+7. **Firebase OTP Authentication & KYC Gates**
+   - Secure phone OTP login mapped to Firestore user profiles. Included DPDP user consent flows with localized policy document rendering for gig workers.
 
-- Frontend: React 18
-- Auth: Firebase Auth
-- Build toolchain: `react-scripts` (CRA)
-- Deployment: Vercel
+---
 
-## Local Development
+## 🛠️ Technology Stack
 
-```bash
-npm install
-npm start
-```
+- **Frontend:** React.js, Tailwind CSS (CDN Injected for instant build execution)
+- **Backend:** Node.js Serverless Functions (Vercel)
+- **Database / Auth:** Firebase Firestore, Firebase Phone Authentication
+- **Payments:** Razorpay API (Integration)
+- **Mobile Packaging:** Flutter WebView
 
-Build production bundle:
+---
 
-```bash
-npm run build
-```
+## 🚀 Running Locally
 
-## Environment Notes
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Start the local server:
+   ```bash
+   npm start
+   ```
 
-Configure Firebase project credentials in the app runtime environment as required by your Firebase setup.
+*(Ensure you have your `.env` configured properly with the `REACT_APP_RAZORPAY_KEY...` strings provided during setup!)*
 
-If email update/password update fails for a logged-in user, Firebase may require recent re-authentication.
-
-For AI assistant backend (`/api/chat`) add these environment variables:
-
-- `OPENAI_API_KEY` = your OpenAI API key
-- `OPENAI_MODEL` = optional model override (default: `gpt-4o-mini`)
-
-## Deployment Notes
-
-- This repo is configured for Vercel static build output (`build/`).
-- Deploy command used:
-
-```bash
-npx vercel --prod --yes
-```
-
-After deployment, production alias is expected at:
-
-- https://gigweatherwage.vercel.app
-
-For Vercel deployments, set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`) in Project Settings -> Environment Variables.
-
-## Team
-
-- Kotapothula Siva Raga Adithi
-- Rohini Yadagiri
-- Garikipati Tejaswi
-- Bhanu Siva Tejaswani Meesala
+*Built with ❤️ during DEVTrails 2026 • Guidewire Hackathon*

@@ -8,7 +8,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, setDoc,
 function useOnline() {
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {
-    const on  = () => setOnline(true);
+    const on = () => setOnline(true);
     const off = () => setOnline(false);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
@@ -1606,14 +1606,14 @@ async function requestAiAssistantResponse({ text = "", language = "en", worker, 
     language,
     workerContext: worker
       ? {
-          name: worker.name,
-          city: worker.city,
-          zone: worker.zone,
-          platform: worker.platform,
-          plan: worker.plan,
-          pendingPremiumDue: worker.pendingPremiumDue || 0,
-          billingCredit: worker.billingCredit || 0
-        }
+        name: worker.name,
+        city: worker.city,
+        zone: worker.zone,
+        platform: worker.platform,
+        plan: worker.plan,
+        pendingPremiumDue: worker.pendingPremiumDue || 0,
+        billingCredit: worker.billingCredit || 0
+      }
       : null,
     history: history.slice(-8).map((msg) => ({ role: msg.role, text: msg.text }))
   };
@@ -1678,10 +1678,10 @@ function buildRuntimeClaimSignals(worker = {}, disruption = {}, claimMeta = null
 
   const recentClaims24h = Array.isArray(worker.history)
     ? worker.history.filter((item) => {
-        const stamp = Date.parse(String(item?.createdAt || item?.date || ""));
-        if (!Number.isFinite(stamp)) return false;
-        return (Date.now() - stamp) <= 24 * 60 * 60 * 1000;
-      }).length
+      const stamp = Date.parse(String(item?.createdAt || item?.date || ""));
+      if (!Number.isFinite(stamp)) return false;
+      return (Date.now() - stamp) <= 24 * 60 * 60 * 1000;
+    }).length
     : 0;
   const frequencyRaw = recentClaims24h >= 3 ? 20 : recentClaims24h === 2 ? 10 : 0;
   const frequencyStatus = frequencyRaw >= 20 ? "fail" : frequencyRaw > 0 ? "warn" : "pass";
@@ -1716,11 +1716,11 @@ function buildRuntimeClaimSignals(worker = {}, disruption = {}, claimMeta = null
 
   const baseSignals = Array.isArray(worker.signals) && worker.signals.length > 0
     ? worker.signals.map((item) => ({
-        signal: item.signal || "Signal",
-        status: item.status || "warn",
-        label: item.label || "Signal evaluated.",
-        raw: Number(item.raw || 0),
-      }))
+      signal: item.signal || "Signal",
+      status: item.status || "warn",
+      label: item.label || "Signal evaluated.",
+      raw: Number(item.raw || 0),
+    }))
     : fallbackSignals;
 
   const filtered = baseSignals.filter((item) => item.signal !== "Account maturity");
@@ -2009,17 +2009,17 @@ function buildFirestoreUserProfile(workerProfile = {}, uid = "", overrides = {})
 
 export default function App() {
   const online = useOnline();
-  const [screen, setScreen]       = useState("splash");
-  const [worker, setWorker]       = useState(null);
+  const [screen, setScreen] = useState("splash");
+  const [worker, setWorker] = useState(null);
   const [activeTab, setActiveTab] = useState("home");
   const [disruption, setDisruption] = useState(null);
-  const [balance, setBalance]     = useState(0);
-  const [history, setHistory]     = useState([]);
+  const [balance, setBalance] = useState(0);
+  const [history, setHistory] = useState([]);
   const [queuedClaims, setQueuedClaims] = useState([]);
-  const [regData, setRegData]     = useState({});
-  const [syncMsg, setSyncMsg]     = useState("");
-  const [theme, setTheme]         = useState("dark");
-  const [language, setLanguage]   = useState(localStorage.getItem("gww_language") || "en");
+  const [regData, setRegData] = useState({});
+  const [syncMsg, setSyncMsg] = useState("");
+  const [theme, setTheme] = useState("dark");
+  const [language, setLanguage] = useState(localStorage.getItem("gww_language") || "en");
   const [claimScore, setClaimScore] = useState(0);
   const [claimPayout, setClaimPayout] = useState(0);
   const [claimDecision, setClaimDecision] = useState("");
@@ -2123,21 +2123,21 @@ export default function App() {
       const profileDoc = buildFirestoreUserProfile(finalWorker, auth.currentUser.uid, {
         role: String(finalWorker?.role || "worker")
       });
-      setDoc(doc(db, "users", auth.currentUser.uid), profileDoc, { merge: true }).catch(() => {});
+      setDoc(doc(db, "users", auth.currentUser.uid), profileDoc, { merge: true }).catch(() => { });
     }
   };
 
   // OTP state
-  const [phone, setPhone]         = useState("");
-  const [otp, setOtp]             = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
   const [confirmResult, setConfirmResult] = useState(null);
-  const [otpSent, setOtpSent]     = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
-  const [otpError, setOtpError]   = useState("");
+  const [otpError, setOtpError] = useState("");
   const [authStage, setAuthStage] = useState("credentials");
   const [pendingEmailWorker, setPendingEmailWorker] = useState(null);
   const [loginIdentifier, setLoginIdentifier] = useState("");
-  const [password, setPassword]   = useState("");
+  const [password, setPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
@@ -2174,9 +2174,9 @@ export default function App() {
     if (online && queuedClaims.length > 0) {
       setSyncMsg(`Syncing ${queuedClaims.length} queued claim(s)...`);
       setTimeout(() => {
-        const amt = queuedClaims.reduce((a,c) => a + c.amount, 0);
+        const amt = queuedClaims.reduce((a, c) => a + c.amount, 0);
         setBalance(b => b + amt);
-        setHistory(h => [...queuedClaims.map(c=>({...c, status:"Paid", synced:true})), ...h]);
+        setHistory(h => [...queuedClaims.map(c => ({ ...c, status: "Paid", synced: true })), ...h]);
         setQueuedClaims([]);
         setSyncMsg(`✓ ${queuedClaims.length} claim(s) processed — ₹${amt} credited`);
         setTimeout(() => setSyncMsg(""), 3000);
@@ -2190,7 +2190,7 @@ export default function App() {
         auth.languageCode = "en";
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
           size: "normal",
-          callback: () => {}
+          callback: () => { }
         });
         window.recaptchaVerifier.render().then((widgetId) => {
           recaptchaWidgetIdRef.current = widgetId;
@@ -2235,27 +2235,27 @@ export default function App() {
       : "";
     const activationBillingEvent = isGraceRegistration
       ? {
-          id: `BILL-${Date.now()}`,
-          date: todayLabel(),
-          type: "Plan Activated (Payment Grace)",
-          detail: `First weekly premium ${formatMoney(initialWeeklyPremium)} deferred. Pay by ${graceUntilLabel}.`,
-          amount: 0,
-          direction: "debit",
-          category: "premium",
-          source: "grace_period",
-          cycle: currentCycle
-        }
+        id: `BILL-${Date.now()}`,
+        date: todayLabel(),
+        type: "Plan Activated (Payment Grace)",
+        detail: `First weekly premium ${formatMoney(initialWeeklyPremium)} deferred. Pay by ${graceUntilLabel}.`,
+        amount: 0,
+        direction: "debit",
+        category: "premium",
+        source: "grace_period",
+        cycle: currentCycle
+      }
       : {
-          id: `BILL-${Date.now()}`,
-          date: todayLabel(),
-          type: "Plan Activation",
-          detail: `${PLANS.find(p => p.id === selectedPlanId)?.name || "Storm Guard"} first weekly premium`,
-          amount: initialWeeklyPremium,
-          direction: "debit",
-          category: "premium",
-          source: "signup_activation",
-          cycle: currentCycle
-        };
+        id: `BILL-${Date.now()}`,
+        date: todayLabel(),
+        type: "Plan Activation",
+        detail: `${PLANS.find(p => p.id === selectedPlanId)?.name || "Storm Guard"} first weekly premium`,
+        amount: initialWeeklyPremium,
+        direction: "debit",
+        category: "premium",
+        source: "signup_activation",
+        cycle: currentCycle
+      };
 
     return {
       id: workerId,
@@ -2317,7 +2317,7 @@ export default function App() {
     setConfirmResult(null);
     setOtpError("");
     if (window.grecaptcha && recaptchaWidgetIdRef.current !== null) {
-      try { window.grecaptcha.reset(recaptchaWidgetIdRef.current); } catch (err) {}
+      try { window.grecaptcha.reset(recaptchaWidgetIdRef.current); } catch (err) { }
     }
     if (recaptchaContainerRef.current) {
       recaptchaContainerRef.current.style.display = "block";
@@ -2346,7 +2346,7 @@ export default function App() {
     let profiles = {};
     try {
       profiles = JSON.parse(localStorage.getItem(profileKey) || "{}");
-    } catch (err) {}
+    } catch (err) { }
 
     if (user?.uid && profiles[user.uid]) {
       return { ...profiles[user.uid], preferredLanguage: language };
@@ -2378,7 +2378,7 @@ export default function App() {
     let profiles = {};
     try {
       profiles = JSON.parse(localStorage.getItem(profileKey) || "{}");
-    } catch (err) {}
+    } catch (err) { }
     profiles[uid] = profile;
     localStorage.setItem(profileKey, JSON.stringify(profiles));
   };
@@ -2397,7 +2397,7 @@ export default function App() {
 
       if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
-          size: "normal", callback: () => {}
+          size: "normal", callback: () => { }
         });
         await window.recaptchaVerifier.render();
       }
@@ -2427,7 +2427,7 @@ export default function App() {
         return;
       }
 
-      const personaMap = { "9000000001":"raju_kumar","9000000002":"meena_devi","9000000003":"priya_sharma","9000000004":"vikram_7749" };
+      const personaMap = { "9000000001": "raju_kumar", "9000000002": "meena_devi", "9000000003": "priya_sharma", "9000000004": "vikram_7749" };
       const docId = personaMap[phoneDigits];
       if (docId) {
         const snap = await getDoc(doc(db, "users", docId));
@@ -2473,16 +2473,16 @@ export default function App() {
       const firestoreProfile = userSnap?.exists() ? userSnap.data() : null;
       const loggedWorker = firestoreProfile
         ? {
-            ...resolveWorkerForEmailAuth(credential.user, ""),
-            ...firestoreProfile,
-            id: credential.user.uid,
-            role: "worker"
-          }
+          ...resolveWorkerForEmailAuth(credential.user, ""),
+          ...firestoreProfile,
+          id: credential.user.uid,
+          role: "worker"
+        }
         : resolveWorkerForEmailAuth(credential.user, "");
       if (!credential.user.displayName) {
         try {
           await updateProfile(credential.user, { displayName: loggedWorker?.name || safeEmail.split("@")[0] });
-        } catch (err) {}
+        } catch (err) { }
       }
       if (loggedWorker?.username) {
         saveUsernameEmailIndex(loggedWorker.username, safeEmail);
@@ -2549,13 +2549,13 @@ export default function App() {
       if (finalData.name?.trim()) {
         try {
           await updateProfile(credential.user, { displayName: finalData.name.trim() });
-        } catch (err) {}
+        } catch (err) { }
       }
       try {
         await sendEmailVerification(credential.user);
         setSyncMsg("Verification email sent. Check inbox/spam and verify after login.");
         setTimeout(() => setSyncMsg(""), 5000);
-      } catch (err) {}
+      } catch (err) { }
       const newWorker = {
         ...buildWorkerFromRegistration({ ...finalData, email: safeEmail, username: safeUsername }),
         id: credential.user.uid,
@@ -2568,7 +2568,7 @@ export default function App() {
         doc(db, "users", credential.user.uid),
         buildFirestoreUserProfile(newWorker, credential.user.uid, { role: "worker" }),
         { merge: true }
-      ).catch(() => {});
+      ).catch(() => { });
       saveEmailProfileForUser(credential.user.uid, newWorker);
       saveUsernameEmailIndex(safeUsername, safeEmail);
       loginAs(newWorker);
@@ -2668,7 +2668,7 @@ export default function App() {
     });
     if (maturityDecision === "safe") {
       if (!online) {
-        const q = { id:`CLM-Q${Date.now()}`, date:"Apr 2, 2026", type:disruption.label, duration:"pending", amount:payout, status:"Queued", score, time:"queued" };
+        const q = { id: `CLM-Q${Date.now()}`, date: "Apr 2, 2026", type: disruption.label, duration: "pending", amount: payout, status: "Queued", score, time: "queued" };
         setQueuedClaims(c => [...c, q]);
       } else {
         setBalance(b => b + payout);
@@ -2698,7 +2698,7 @@ export default function App() {
           platform: worker?.platform || "",
           plan: worker?.plan || "",
           disruption: disruption?.label || ""
-        }).catch(() => {});
+        }).catch(() => { });
       }
     }
     setClaimMeta(null);
@@ -2777,8 +2777,8 @@ export default function App() {
       {!online && screen === "dashboard" && <div className="offline-bar">📡 Offline — cached data shown. Claims will queue.</div>}
       {syncMsg && <div className="sync-bar">{syncMsg}</div>}
 
-      {screen === "splash"     && <Splash />}
-      {screen === "landing"    && <Landing onLogin={() => { setAuthStage("credentials"); setPendingEmailWorker(null); setOtpSent(false); setOtp(""); setOtpError(""); setConfirmResult(null); go("otp"); }} onRegister={() => go("reg1")} onAdmin={requestAdminAccess} theme={theme} toggleTheme={toggleTheme} language={language} setLanguage={setLanguage} />}
+      {screen === "splash" && <Splash />}
+      {screen === "landing" && <Landing onLogin={() => { setAuthStage("credentials"); setPendingEmailWorker(null); setOtpSent(false); setOtp(""); setOtpError(""); setConfirmResult(null); go("otp"); }} onRegister={() => go("reg1")} onAdmin={requestAdminAccess} theme={theme} toggleTheme={toggleTheme} language={language} setLanguage={setLanguage} />}
       {screen === "admin-login" && (
         <div className="screen form-screen">
           <button className="back-btn" onClick={() => go("landing")}>{"< Back"}</button>
@@ -2812,11 +2812,11 @@ export default function App() {
           <button className="back-btn" onClick={() => go("landing")}>← Back</button>
           <div className="fcard">
             <div className="fhead">
-              <div style={{fontSize:36,marginBottom:8}}>📱</div>
+              <div style={{ fontSize: 36, marginBottom: 8 }}>📱</div>
               <h2>{"Login with Username or Email"}</h2>
               <p>Enter your username or email and password to continue.</p>
             </div>
-            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><LanguageSelector language={language} setLanguage={setLanguage} compact /></div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><LanguageSelector language={language} setLanguage={setLanguage} compact /></div>
 
             {authStage === "credentials" ? (
               <>
@@ -2844,62 +2844,62 @@ export default function App() {
                     </button>
                   </div>
                 </div>
-                <label style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:16}}>
-                  <input type="checkbox" checked={loginConsent} onChange={e=>setLoginConsent(e.target.checked)} style={{marginTop:2}} />
+                <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12, color: "var(--muted)", lineHeight: 1.5, marginBottom: 16 }}>
+                  <input type="checkbox" checked={loginConsent} onChange={e => setLoginConsent(e.target.checked)} style={{ marginTop: 2 }} />
                   <span>{translate(language, "privacyAgree", "I agree to the Privacy Policy, payout rules, admin review, and fraud checks for this account.")}</span>
                 </label>
-                {emailError && <div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{emailError}</div>}
-                {emailInfo && <div style={{color:"#22c55e",fontSize:13,marginBottom:8}}>{emailInfo}</div>}
+                {emailError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 8 }}>{emailError}</div>}
+                {emailInfo && <div style={{ color: "#22c55e", fontSize: 13, marginBottom: 8 }}>{emailInfo}</div>}
                 <button className="btn-primary" onClick={handleEmailAuth} disabled={emailLoading || !loginConsent}>
                   {emailLoading ? "Please wait..." : "Login ->"}
                 </button>
-                <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
-                  <button type="button" style={{background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer",padding:0}} onClick={handleForgotPassword} disabled={emailLoading}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
+                  <button type="button" style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 13, cursor: "pointer", padding: 0 }} onClick={handleForgotPassword} disabled={emailLoading}>
                     Forgot password
                   </button>
-                  <button type="button" style={{background:"none",border:"none",color:"var(--rain)",fontSize:13,cursor:"pointer",padding:0}} onClick={() => go("reg1")}>
+                  <button type="button" style={{ background: "none", border: "none", color: "var(--rain)", fontSize: 13, cursor: "pointer", padding: 0 }} onClick={() => go("reg1")}>
                     New user sign up
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <div style={{display: otpSent ? "none" : "flex", justifyContent:"center", marginBottom:16, minHeight:78}}>
+                <div style={{ display: otpSent ? "none" : "flex", justifyContent: "center", marginBottom: 16, minHeight: 78 }}>
                   <div id="recaptcha-container" ref={recaptchaContainerRef}></div>
                 </div>
                 {!otpSent ? (
                   <>
                     <div className="field">
                       <label>{translate(language, "phoneNumber", "Phone number")}</label>
-                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <span style={{padding:"10px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,fontSize:14,color:"var(--muted)"}}>+91</span>
-                        <input placeholder="9000000001" value={phone} onChange={e=>setPhone(e.target.value)} maxLength={10} style={{flex:1}}/>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ padding: "10px 12px", background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 14, color: "var(--muted)" }}>+91</span>
+                        <input placeholder="9000000001" value={phone} onChange={e => setPhone(e.target.value)} maxLength={10} style={{ flex: 1 }} />
                       </div>
                     </div>
-                    <div style={{display:"flex",justifyContent:"center",marginBottom:16,fontSize:12,color:"var(--muted)",textAlign:"center"}}>Complete the "I am not a robot" captcha above, then press Send OTP.</div>
-                    {otpError && <div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{otpError}</div>}
-                    <div style={{fontSize:12,color:"var(--muted)",marginBottom:16,lineHeight:1.6,background:"var(--bg3)",borderRadius:10,padding:"10px 12px"}}>
-                      <strong style={{color:"var(--text)"}}>Test accounts:</strong><br/>
-                      9000000001 • Raju (Safe ✅)<br/>
-                      9000000002 • Meena (Delayed ⚠️)<br/>
-                      9000000003 • Priya (Blocked ❌)<br/>
-                      9000000004 • Vikram (Ring ❌)<br/>
-                      <strong style={{color:"var(--rain)"}}>Use your Firebase test-number setup or real OTP delivery</strong>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>Complete the "I am not a robot" captcha above, then press Send OTP.</div>
+                    {otpError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 8 }}>{otpError}</div>}
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6, background: "var(--bg3)", borderRadius: 10, padding: "10px 12px" }}>
+                      <strong style={{ color: "var(--text)" }}>Test accounts:</strong><br />
+                      9000000001 • Raju (Safe ✅)<br />
+                      9000000002 • Meena (Delayed ⚠️)<br />
+                      9000000003 • Priya (Blocked ❌)<br />
+                      9000000004 • Vikram (Ring ❌)<br />
+                      <strong style={{ color: "var(--rain)" }}>Use your Firebase test-number setup or real OTP delivery</strong>
                     </div>
-                    <button className="btn-primary" onClick={sendOTP} disabled={otpLoading||phone.length<10||!loginConsent}>
-                      {otpLoading?"Sending OTP...":translate(language, "sendOtp", "Send OTP ->")}
+                    <button className="btn-primary" onClick={sendOTP} disabled={otpLoading || phone.length < 10 || !loginConsent}>
+                      {otpLoading ? "Sending OTP..." : translate(language, "sendOtp", "Send OTP ->")}
                     </button>
-                    <button type="button" style={{marginTop:10,width:"100%",background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer"}} onClick={() => { setAuthStage("credentials"); resetOtpFlow(); }}>
+                    <button type="button" style={{ marginTop: 10, width: "100%", background: "none", border: "none", color: "var(--muted)", fontSize: 13, cursor: "pointer" }} onClick={() => { setAuthStage("credentials"); resetOtpFlow(); }}>
                       Back to Email Login
                     </button>
                   </>
                 ) : (
                   <>
-                    <div style={{textAlign:"center",marginBottom:16}}>
-                      <div style={{fontSize:13,color:"var(--muted)"}}>OTP sent to +91 {phone}</div>
-                      <div style={{fontSize:12,color:"#22c55e",marginTop:4}}>Verification code sent successfully</div>
+                    <div style={{ textAlign: "center", marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, color: "var(--muted)" }}>OTP sent to +91 {phone}</div>
+                      <div style={{ fontSize: 12, color: "#22c55e", marginTop: 4 }}>Verification code sent successfully</div>
                     </div>
-                    <div className="field otp-field" style={{background:"rgba(59,130,246,0.06)",border:"1px solid rgba(59,130,246,0.18)",borderRadius:16,padding:16}}>
+                    <div className="field otp-field" style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)", borderRadius: 16, padding: 16 }}>
                       <label>Enter OTP</label>
                       <input
                         className="otp-input"
@@ -2908,49 +2908,49 @@ export default function App() {
                         autoFocus
                         placeholder="Enter 6-digit OTP"
                         value={otp}
-                        onChange={e=>setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                        onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                         maxLength={6}
-                        style={{letterSpacing:8,fontSize:24,textAlign:"center",background:"var(--bg3)",border:"2px solid var(--rain)",borderRadius:14,padding:"16px 18px",minHeight:64,color:"#fff",width:"100%",display:"block",boxShadow:"0 0 0 3px rgba(59,130,246,0.08)",caretColor:"#fff",fontWeight:700}}
+                        style={{ letterSpacing: 8, fontSize: 24, textAlign: "center", background: "var(--bg3)", border: "2px solid var(--rain)", borderRadius: 14, padding: "16px 18px", minHeight: 64, color: "#fff", width: "100%", display: "block", boxShadow: "0 0 0 3px rgba(59,130,246,0.08)", caretColor: "#fff", fontWeight: 700 }}
                       />
-                      <div style={{fontSize:12,color:"var(--muted)",marginTop:8}}>Type the 6-digit OTP here after completing the captcha and pressing Send OTP.</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>Type the 6-digit OTP here after completing the captcha and pressing Send OTP.</div>
                     </div>
-                    {otpError && <div style={{color:"#EF4444",fontSize:13,marginBottom:8}}>{otpError}</div>}
-                    <button className="btn-primary" onClick={verifyOTP} disabled={otpLoading||otp.length<6}>
-                      {otpLoading?"Verifying...":translate(language, "verifyLogin", "Verify & Login ->")}
+                    {otpError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 8 }}>{otpError}</div>}
+                    <button className="btn-primary" onClick={verifyOTP} disabled={otpLoading || otp.length < 6}>
+                      {otpLoading ? "Verifying..." : translate(language, "verifyLogin", "Verify & Login ->")}
                     </button>
-                    <button style={{marginTop:10,width:"100%",background:"none",border:"none",color:"var(--muted)",fontSize:13,cursor:"pointer"}} onClick={resetOtpFlow}>{translate(language, "changeNumber", "Change number")}</button>
+                    <button style={{ marginTop: 10, width: "100%", background: "none", border: "none", color: "var(--muted)", fontSize: 13, cursor: "pointer" }} onClick={resetOtpFlow}>{translate(language, "changeNumber", "Change number")}</button>
                   </>
                 )}
               </>
             )}
             {authStage === "otp" && (
-            <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16}}>
-              <p style={{fontSize:12,color:"var(--muted)",textAlign:"center",marginBottom:12}}>Or login directly as a demo persona:</p>
-              {Object.values(PERSONAS).map(w => (
-                <button key={w.id} className="wcard" style={{marginBottom:8,opacity:loginConsent?1:0.55}} onClick={()=>loginAs(w)} disabled={!loginConsent}>
-                  <div className="wcard-top">
-                    <div className="wavatar" style={{background:w.tagColor==="#22c55e"?"rgba(34,197,94,0.15)":"rgba(239,68,68,0.15)",color:w.tagColor}}>{w.avatar}</div>
-                    <div className="winfo"><div className="wname">{w.name}</div><div className="wmeta">{w.platform} • {w.city}</div></div>
-                    <span className="wtag" style={{color:w.tagColor,borderColor:w.tagColor}}>{w.tagColor==="#22c55e"?"✓":"✕"}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+              <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+                <p style={{ fontSize: 12, color: "var(--muted)", textAlign: "center", marginBottom: 12 }}>Or login directly as a demo persona:</p>
+                {Object.values(PERSONAS).map(w => (
+                  <button key={w.id} className="wcard" style={{ marginBottom: 8, opacity: loginConsent ? 1 : 0.55 }} onClick={() => loginAs(w)} disabled={!loginConsent}>
+                    <div className="wcard-top">
+                      <div className="wavatar" style={{ background: w.tagColor === "#22c55e" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: w.tagColor }}>{w.avatar}</div>
+                      <div className="winfo"><div className="wname">{w.name}</div><div className="wmeta">{w.platform} • {w.city}</div></div>
+                      <span className="wtag" style={{ color: w.tagColor, borderColor: w.tagColor }}>{w.tagColor === "#22c55e" ? "✓" : "✕"}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {screen === "calc"    && <PremiumCalculatorV3 worker={worker} onBack={() => go("dashboard")} />}
-      {screen === "policy"  && worker && <PolicyPrivacyScreen worker={worker} onBack={() => go("dashboard")} onUpgrade={() => go("upgrade")} language={language} />}
-      {screen === "reg1" && <Reg1 data={regData} onNext={(d)=>{setRegData(d);go("reg2");}} onBack={()=>go("landing")}/>}
-      {screen === "reg2" && <Reg2 data={regData} onNext={(d)=>{setRegData({...regData,...d});go("reg3");}} onBack={()=>go("reg1")}/>}
-      {screen === "reg3" && <Reg3 data={regData} onNext={(d)=>{setRegData({...regData,...d});go("reg4");}} onBack={()=>go("reg2")}/>}
-      {screen === "reg4" && <Reg4 data={regData} onNext={(d)=>{setRegData({...regData,...d});go("reg5");}} onBack={()=>go("reg3")}/>}
-      {screen === "reg5" && <Reg5 data={regData} onNext={(d)=>{setRegData({...regData,...d});go("reg6");}} onBack={()=>go("reg4")}/>}
-      {screen === "reg6" && <Reg6 data={regData} onNext={(d)=>{setRegData({...regData,...d});go("reg7");}} onBack={()=>go("reg5")}/>}
-      {screen === "reg7" && <Reg7 data={regData} onDone={()=>go("reg8")} />}
-      {screen === "reg8" && <Reg8 data={regData} language={language} setLanguage={setLanguage} registrationError={registrationError} registrationLoading={registrationLoading} onBack={()=>go("reg7")} onDone={handleRegistrationDone}/>}
+      {screen === "calc" && <PremiumCalculatorV3 worker={worker} onBack={() => go("dashboard")} />}
+      {screen === "policy" && worker && <PolicyPrivacyScreen worker={worker} onBack={() => go("dashboard")} onUpgrade={() => go("upgrade")} language={language} />}
+      {screen === "reg1" && <Reg1 data={regData} onNext={(d) => { setRegData(d); go("reg2"); }} onBack={() => go("landing")} />}
+      {screen === "reg2" && <Reg2 data={regData} onNext={(d) => { setRegData({ ...regData, ...d }); go("reg3"); }} onBack={() => go("reg1")} />}
+      {screen === "reg3" && <Reg3 data={regData} onNext={(d) => { setRegData({ ...regData, ...d }); go("reg4"); }} onBack={() => go("reg2")} />}
+      {screen === "reg4" && <Reg4 data={regData} onNext={(d) => { setRegData({ ...regData, ...d }); go("reg5"); }} onBack={() => go("reg3")} />}
+      {screen === "reg5" && <Reg5 data={regData} onNext={(d) => { setRegData({ ...regData, ...d }); go("reg6"); }} onBack={() => go("reg4")} />}
+      {screen === "reg6" && <Reg6 data={regData} onNext={(d) => { setRegData({ ...regData, ...d }); go("reg7"); }} onBack={() => go("reg5")} />}
+      {screen === "reg7" && <Reg7 data={regData} onDone={() => go("reg8")} />}
+      {screen === "reg8" && <Reg8 data={regData} language={language} setLanguage={setLanguage} registrationError={registrationError} registrationLoading={registrationLoading} onBack={() => go("reg7")} onDone={handleRegistrationDone} />}
       {screen === "upgrade" && worker && (
         <UpgradeBillingScreen
           worker={worker}
@@ -3022,24 +3022,24 @@ export default function App() {
           disruptions={DISRUPTIONS} activeTab={activeTab}
           setActiveTab={setActiveTab} online={online}
           queuedClaims={queuedClaims}
-          onDisruption={(d)=>{setDisruption(d);setClaimMeta(null);go("claim");}}
-          onLogout={logout} onPolicy={()=>go("policy")}
-          onCalc={()=>go("calc")} theme={theme} toggleTheme={toggleTheme}
+          onDisruption={(d) => { setDisruption(d); setClaimMeta(null); go("claim"); }}
+          onLogout={logout} onPolicy={() => go("policy")}
+          onCalc={() => go("calc")} theme={theme} toggleTheme={toggleTheme}
           onWorkerUpdate={persistWorker}
           language={language}
           setLanguage={setLanguage}
         />
       )}
 
-      {screen === "claim"   && worker && disruption && <ClaimScreen disruption={disruption} worker={worker} online={online} seedMeta={claimMeta} onProceed={(meta)=>{setClaimMeta(meta || null);go("fraud");}} onBack={()=>go("dashboard")}/>}
-      {screen === "fraud"   && worker && disruption && <FraudAnalysis disruption={disruption} worker={worker} claimMeta={claimMeta} online={online} onResult={handleClaimResult} onBack={()=>go("dashboard")}/>}
+      {screen === "claim" && worker && disruption && <ClaimScreen disruption={disruption} worker={worker} online={online} seedMeta={claimMeta} onProceed={(meta) => { setClaimMeta(meta || null); go("fraud"); }} onBack={() => go("dashboard")} />}
+      {screen === "fraud" && worker && disruption && <FraudAnalysis disruption={disruption} worker={worker} claimMeta={claimMeta} online={online} onResult={handleClaimResult} onBack={() => go("dashboard")} />}
       {screen === "settlement" && worker && disruption && (
-        <SettlementLetter worker={worker} disruption={disruption} decision={claimDecision} score={claimScore} payoutAmount={claimPayout} settlementMeta={claimSettlement} onDone={()=>go("dashboard")}/>
+        <SettlementLetter worker={worker} disruption={disruption} decision={claimDecision} score={claimScore} payoutAmount={claimPayout} settlementMeta={claimSettlement} onDone={() => go("dashboard")} />
       )}
-      {screen === "payout"  && worker && disruption && <PayoutScreen disruption={disruption} worker={worker} balance={balance} onDone={()=>go("dashboard")}/>}
-      {screen === "delayed" && worker && disruption && <DelayedScreen disruption={disruption} onDone={()=>go("dashboard")}/>}
-      {screen === "blocked" && worker && <BlockedScreen worker={worker} onDone={()=>go("dashboard")}/>}
-      {screen === "queued"  && disruption && <QueuedScreen disruption={disruption} onDone={()=>go("dashboard")}/>}
+      {screen === "payout" && worker && disruption && <PayoutScreen disruption={disruption} worker={worker} balance={balance} onDone={() => go("dashboard")} />}
+      {screen === "delayed" && worker && disruption && <DelayedScreen disruption={disruption} onDone={() => go("dashboard")} />}
+      {screen === "blocked" && worker && <BlockedScreen worker={worker} onDone={() => go("dashboard")} />}
+      {screen === "queued" && disruption && <QueuedScreen disruption={disruption} onDone={() => go("dashboard")} />}
       {screen === "admin" && isAdminSession && (
         <AdminDashboard
           worker={worker}
@@ -4233,7 +4233,7 @@ function UpgradePlanScreen({ worker, onBack, onDone }) {
         {PLANS.map(p => {
           const estimatedWeekly = computeWorkerDynamicPremium({ ...worker, plan: p.id }).weekly;
           return (
-            <button key={p.id} className={`plan-card ${selectedPlan===p.id?"selected":""}`} style={{ "--pc": p.color }} onClick={() => setSelectedPlan(p.id)}>
+            <button key={p.id} className={`plan-card ${selectedPlan === p.id ? "selected" : ""}`} style={{ "--pc": p.color }} onClick={() => setSelectedPlan(p.id)}>
               {p.recommended && <div className="plan-rec">Recommended</div>}
               <div className="plan-top">
                 <div>
@@ -4241,10 +4241,10 @@ function UpgradePlanScreen({ worker, onBack, onDone }) {
                   <div className="plan-price">{formatMoney(estimatedWeekly)}<span>/week</span></div>
                   <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>base {formatMoney(p.price)}/week</div>
                 </div>
-                <div className="plan-check">{selectedPlan===p.id?"✓":""}</div>
+                <div className="plan-check">{selectedPlan === p.id ? "✓" : ""}</div>
               </div>
               <div className="plan-stats"><span>Coverage: ₹{p.coverage.toLocaleString()}</span><span>₹{p.payoutPerHour}/hr</span></div>
-              <div className="plan-feats">{p.features.map((f,i)=><div key={i} className="plan-feat">✓ {f}</div>)}</div>
+              <div className="plan-feats">{p.features.map((f, i) => <div key={i} className="plan-feat">✓ {f}</div>)}</div>
             </button>
           );
         })}
@@ -4380,22 +4380,22 @@ function Splash() {
 function Landing({ onLogin, onRegister, onAdmin, theme, toggleTheme, language, setLanguage }) {
   return (
     <div className="screen landing-screen">
-      <div className="rain-bg">{[...Array(16)].map((_,i)=><div key={i} className="drop" style={{left:`${(i*6.5)%100}%`,animationDelay:`${(i*0.2)%2}s`,animationDuration:`${0.7+(i%4)*0.2}s`}}/>)}</div>
-      <button onClick={toggleTheme} style={{position:"absolute",top:20,right:20,background:"var(--card)",border:"1px solid var(--border)",borderRadius:10,padding:"6px 12px",color:"var(--text)",cursor:"pointer",fontSize:16,zIndex:10}}>
-        {theme==="dark"?"☀️":"🌙"}
+      <div className="rain-bg">{[...Array(16)].map((_, i) => <div key={i} className="drop" style={{ left: `${(i * 6.5) % 100}%`, animationDelay: `${(i * 0.2) % 2}s`, animationDuration: `${0.7 + (i % 4) * 0.2}s` }} />)}</div>
+      <button onClick={toggleTheme} style={{ position: "absolute", top: 20, right: 20, background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "6px 12px", color: "var(--text)", cursor: "pointer", fontSize: 16, zIndex: 10 }}>
+        {theme === "dark" ? "☀️" : "🌙"}
       </button>
-      <div style={{position:"absolute",top:20,left:20,zIndex:10}}>
+      <div style={{ position: "absolute", top: 20, left: 20, zIndex: 10 }}>
         <LanguageSelector language={language} setLanguage={setLanguage} />
       </div>
       <div className="landing-inner">
         <div className="lbadge">DEVTrails 2026 • Guidewire Hackathon</div>
         <h1 className="ltitle"><span className="lg">Gig</span><span className="lw">Weather</span><span className="lwa">Wage</span></h1>
-        <p className="lsub">When the storm stops your deliveries,<br/>we make sure it doesn't stop your income.</p>
+        <p className="lsub">When the storm stops your deliveries,<br />we make sure it doesn't stop your income.</p>
         <div className="lstats">
           <div className="lstat"><span className="lsn">2.8Cr+</span><span className="lsl">Gig workers</span></div>
-          <div className="ldiv"/>
+          <div className="ldiv" />
           <div className="lstat"><span className="lsn">₹0</span><span className="lsl">Safety net</span></div>
-          <div className="ldiv"/>
+          <div className="ldiv" />
           <div className="lstat"><span className="lsn">Instant</span><span className="lsl">Payouts</span></div>
         </div>
         <div className="lbtns">
@@ -4424,18 +4424,18 @@ function LegacyReg1({ data, onNext, onBack }) {
   return (
     <div className="screen form-screen">
       <button className="back-btn" onClick={onBack}>← Back</button>
-      <div className="reg-progress"><div className="reg-bar" style={{width:"20%"}}/></div>
+      <div className="reg-progress"><div className="reg-bar" style={{ width: "20%" }} /></div>
       <div className="fcard">
         <div className="fhead"><div className="step-num">1 of 5</div><h2>Personal Info</h2><p>Tell us about yourself</p></div>
-        <div className="field"><label>Full name</label><input placeholder="e.g. Raju Kumar" value={d.name} onChange={e=>setD({...d,name:e.target.value})}/></div>
-        <div className="field"><label>Phone number</label><input placeholder="98765 43210" value={d.phone} onChange={e=>setD({...d,phone:e.target.value})}/></div>
+        <div className="field"><label>Full name</label><input placeholder="e.g. Raju Kumar" value={d.name} onChange={e => setD({ ...d, name: e.target.value })} /></div>
+        <div className="field"><label>Phone number</label><input placeholder="98765 43210" value={d.phone} onChange={e => setD({ ...d, phone: e.target.value })} /></div>
         <div className="field"><label>City</label>
-          <select value={d.city} onChange={e=>setD({...d,city:e.target.value})}>
-            {["Hyderabad","Bengaluru","Chennai","Mumbai","Delhi","Pune","Kolkata"].map(c=><option key={c}>{c}</option>)}
+          <select value={d.city} onChange={e => setD({ ...d, city: e.target.value })}>
+            {["Hyderabad", "Bengaluru", "Chennai", "Mumbai", "Delhi", "Pune", "Kolkata"].map(c => <option key={c}>{c}</option>)}
           </select>
         </div>
-        <div className="field"><label>Zone / Area</label><input placeholder="e.g. Madhapur" value={d.zone} onChange={e=>setD({...d,zone:e.target.value})}/></div>
-        <button className="btn-primary" onClick={()=>onNext(d)} disabled={!d.name||!d.phone}>Next →</button>
+        <div className="field"><label>Zone / Area</label><input placeholder="e.g. Madhapur" value={d.zone} onChange={e => setD({ ...d, zone: e.target.value })} /></div>
+        <button className="btn-primary" onClick={() => onNext(d)} disabled={!d.name || !d.phone}>Next →</button>
       </div>
     </div>
   );
@@ -4450,23 +4450,23 @@ function LegacyReg2({ data, onNext, onBack }) {
   return (
     <div className="screen form-screen">
       <button className="back-btn" onClick={onBack}>← Back</button>
-      <div className="reg-progress"><div className="reg-bar" style={{width:"40%"}}/></div>
+      <div className="reg-progress"><div className="reg-bar" style={{ width: "40%" }} /></div>
       <div className="fcard">
         <div className="fhead"><div className="step-num">2 of 5</div><h2>Work Info</h2><p>Your delivery details</p></div>
         <div className="field"><label>Platform</label>
           <div className="plat-grid">
-            {["Swiggy","Zomato","Zepto","Amazon"].map(p=>(
-              <button key={p} className={`plat-btn ${d.platform===p?"active":""}`} onClick={()=>setD({...d,platform:p})}>{p}</button>
+            {["Swiggy", "Zomato", "Zepto", "Amazon"].map(p => (
+              <button key={p} className={`plat-btn ${d.platform === p ? "active" : ""}`} onClick={() => setD({ ...d, platform: p })}>{p}</button>
             ))}
           </div>
         </div>
-        <div className="field"><label>Partner ID</label><input placeholder="e.g. SWG-2024-HYD-4521" value={d.partnerId} onChange={e=>setD({...d,partnerId:e.target.value})}/></div>
+        <div className="field"><label>Partner ID</label><input placeholder="e.g. SWG-2024-HYD-4521" value={d.partnerId} onChange={e => setD({ ...d, partnerId: e.target.value })} /></div>
         <div className="field"><label>Daily working hours</label>
-          <select value={d.hours} onChange={e=>setD({...d,hours:e.target.value})}>
-            {["4-6 hrs/day","6-8 hrs/day","8-10 hrs/day","10+ hrs/day"].map(h=><option key={h}>{h}</option>)}
+          <select value={d.hours} onChange={e => setD({ ...d, hours: e.target.value })}>
+            {["4-6 hrs/day", "6-8 hrs/day", "8-10 hrs/day", "10+ hrs/day"].map(h => <option key={h}>{h}</option>)}
           </select>
         </div>
-        <button className="btn-primary" onClick={()=>onNext(d)}>Next →</button>
+        <button className="btn-primary" onClick={() => onNext(d)}>Next →</button>
       </div>
     </div>
   );
@@ -4475,28 +4475,28 @@ function LegacyReg2({ data, onNext, onBack }) {
 function LegacyReg3({ data, onNext, onBack }) {
   const [sel, setSel] = useState(data?.plan || "guard");
   return (
-    <div className="screen form-screen" style={{paddingTop:16}}>
+    <div className="screen form-screen" style={{ paddingTop: 16 }}>
       <button className="back-btn" onClick={onBack}>← Back</button>
-      <div className="reg-progress"><div className="reg-bar" style={{width:"60%"}}/></div>
-      <div style={{marginBottom:12,paddingTop:4}}>
-        <div className="step-num" style={{textAlign:"center"}}>3 of 5</div>
-        <h2 style={{textAlign:"center",fontFamily:"var(--fd)",fontSize:20,fontWeight:800,margin:"6px 0 4px"}}>Choose Your Plan</h2>
-        <p style={{textAlign:"center",color:"var(--muted)",fontSize:13}}>Weekly premium — cancel anytime</p>
+      <div className="reg-progress"><div className="reg-bar" style={{ width: "60%" }} /></div>
+      <div style={{ marginBottom: 12, paddingTop: 4 }}>
+        <div className="step-num" style={{ textAlign: "center" }}>3 of 5</div>
+        <h2 style={{ textAlign: "center", fontFamily: "var(--fd)", fontSize: 20, fontWeight: 800, margin: "6px 0 4px" }}>Choose Your Plan</h2>
+        <p style={{ textAlign: "center", color: "var(--muted)", fontSize: 13 }}>Weekly premium — cancel anytime</p>
       </div>
       <div className="plan-list">
-        {PLANS.map(p=>(
-          <button key={p.id} className={`plan-card ${sel===p.id?"selected":""}`} style={{"--pc":p.color}} onClick={()=>setSel(p.id)}>
+        {PLANS.map(p => (
+          <button key={p.id} className={`plan-card ${sel === p.id ? "selected" : ""}`} style={{ "--pc": p.color }} onClick={() => setSel(p.id)}>
             {p.recommended && <div className="plan-rec">Recommended</div>}
             <div className="plan-top">
               <div><div className="plan-name">{p.name}</div><div className="plan-price">₹{p.price}<span>/week</span></div></div>
-              <div className="plan-check">{sel===p.id?"✓":""}</div>
+              <div className="plan-check">{sel === p.id ? "✓" : ""}</div>
             </div>
             <div className="plan-stats"><span>Coverage: ₹{p.coverage.toLocaleString()}</span><span>₹{p.payoutPerHour}/hr</span></div>
-            <div className="plan-feats">{p.features.map((f,i)=><div key={i} className="plan-feat">✓ {f}</div>)}</div>
+            <div className="plan-feats">{p.features.map((f, i) => <div key={i} className="plan-feat">✓ {f}</div>)}</div>
           </button>
         ))}
       </div>
-      <button className="btn-primary" style={{marginTop:12}} onClick={()=>onNext({plan:sel})}>Next →</button>
+      <button className="btn-primary" style={{ marginTop: 12 }} onClick={() => onNext({ plan: sel })}>Next →</button>
     </div>
   );
 }
@@ -4504,17 +4504,17 @@ function LegacyReg3({ data, onNext, onBack }) {
 function LegacyReg4({ data, onNext, onBack }) {
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState("");
-  const plan = PLANS.find(p=>p.id===data.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === data.plan) || PLANS[1];
   const handleUPI = (app) => {
     setMethod(app); setPaying(true);
-    if (app==="phonepe"){try{window.open("phonepe://pay","_blank");}catch(e){}}
-    if (app==="gpay"){try{window.open("tez://upi/pay","_blank");}catch(e){}}
-    setTimeout(()=>{setPaying(false);onNext({});},2000);
+    if (app === "phonepe") { try { window.open("phonepe://pay", "_blank"); } catch (e) { } }
+    if (app === "gpay") { try { window.open("tez://upi/pay", "_blank"); } catch (e) { } }
+    setTimeout(() => { setPaying(false); onNext({}); }, 2000);
   };
   return (
     <div className="screen form-screen">
       <button className="back-btn" onClick={onBack}>← Back</button>
-      <div className="reg-progress"><div className="reg-bar" style={{width:"80%"}}/></div>
+      <div className="reg-progress"><div className="reg-bar" style={{ width: "80%" }} /></div>
       <div className="fcard">
         <div className="fhead"><div className="step-num">4 of 5</div><h2>Payment</h2><p>First week premium</p></div>
         <div className="pay-amount-box">
@@ -4522,15 +4522,15 @@ function LegacyReg4({ data, onNext, onBack }) {
           <div className="pay-amt">₹{plan.price}</div>
           <div className="pay-sub">for first week • auto-renews weekly</div>
         </div>
-        {paying?(
-          <div className="paying-state"><div className="paying-spinner"/><p>Processing via {method}...</p></div>
-        ):(
+        {paying ? (
+          <div className="paying-state"><div className="paying-spinner" /><p>Processing via {method}...</p></div>
+        ) : (
           <div className="upi-options">
-            <button className="upi-btn" onClick={()=>handleUPI("phonepe")}><span className="upi-icon">💜</span> Pay with PhonePe</button>
-            <button className="upi-btn" onClick={()=>handleUPI("gpay")}><span className="upi-icon">🔵</span> Pay with Google Pay</button>
+            <button className="upi-btn" onClick={() => handleUPI("phonepe")}><span className="upi-icon">💜</span> Pay with PhonePe</button>
+            <button className="upi-btn" onClick={() => handleUPI("gpay")}><span className="upi-icon">🔵</span> Pay with Google Pay</button>
             <div className="upi-divider"><span>or enter UPI ID</span></div>
-            <div className="field" style={{margin:0}}><input placeholder="yourname@upi"/></div>
-            <button className="btn-primary" style={{marginTop:10}} onClick={()=>handleUPI("upi")}>Pay ₹{plan.price} →</button>
+            <div className="field" style={{ margin: 0 }}><input placeholder="yourname@upi" /></div>
+            <button className="btn-primary" style={{ marginTop: 10 }} onClick={() => handleUPI("upi")}>Pay ₹{plan.price} →</button>
           </div>
         )}
       </div>
@@ -4539,21 +4539,21 @@ function LegacyReg4({ data, onNext, onBack }) {
 }
 
 function LegacyReg5({ data, onDone }) {
-  const plan = PLANS.find(p=>p.id===data.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === data.plan) || PLANS[1];
   return (
-    <div className="screen form-screen" style={{justifyContent:"center",textAlign:"center"}}>
-      <div className="success-ring" style={{margin:"0 auto 20px"}}><div className="check-icon">✓</div></div>
-      <h2 style={{fontFamily:"var(--fd)",fontSize:24,fontWeight:800,marginBottom:8}}>Welcome to GigWeatherWage!</h2>
-      <p style={{color:"var(--muted)",fontSize:14,marginBottom:24}}>Your income is now protected</p>
+    <div className="screen form-screen" style={{ justifyContent: "center", textAlign: "center" }}>
+      <div className="success-ring" style={{ margin: "0 auto 20px" }}><div className="check-icon">✓</div></div>
+      <h2 style={{ fontFamily: "var(--fd)", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Welcome to GigWeatherWage!</h2>
+      <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>Your income is now protected</p>
       <div className="reg-success-card">
-        <div className="detail-row"><span>Name</span><span>{data.name||"Demo User"}</span></div>
-        <div className="detail-row"><span>Platform</span><span>{data.platform||"Swiggy"}</span></div>
-        <div className="detail-row"><span>Plan</span><span style={{color:plan.color}}>{plan.name}</span></div>
+        <div className="detail-row"><span>Name</span><span>{data.name || "Demo User"}</span></div>
+        <div className="detail-row"><span>Platform</span><span>{data.platform || "Swiggy"}</span></div>
+        <div className="detail-row"><span>Plan</span><span style={{ color: plan.color }}>{plan.name}</span></div>
         <div className="detail-row"><span>Coverage</span><span>₹{plan.coverage.toLocaleString()}</span></div>
         <div className="detail-row"><span>Premium</span><span>₹{plan.price}/week</span></div>
         <div className="detail-row"><span>Status</span><span className="safe-badge">Active ✓</span></div>
       </div>
-      <button className="btn-primary" style={{marginTop:20}} onClick={onDone}>Go to Dashboard →</button>
+      <button className="btn-primary" style={{ marginTop: 20 }} onClick={onDone}>Go to Dashboard →</button>
     </div>
   );
 }
@@ -4562,36 +4562,36 @@ function LegacyRegistrationReviewStep({ data, onNext, onBack }) {
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState("");
   const [accepted, setAccepted] = useState(false);
-  const plan = PLANS.find(p=>p.id===data.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === data.plan) || PLANS[1];
 
   const handleUPI = (app) => {
     setMethod(app);
     setPaying(true);
-    if (app==="phonepe"){try{window.open("phonepe://pay","_blank");}catch(e){}}
-    if (app==="gpay"){try{window.open("tez://upi/pay","_blank");}catch(e){}}
-    setTimeout(()=>{setPaying(false);onNext({});},2000);
+    if (app === "phonepe") { try { window.open("phonepe://pay", "_blank"); } catch (e) { } }
+    if (app === "gpay") { try { window.open("tez://upi/pay", "_blank"); } catch (e) { } }
+    setTimeout(() => { setPaying(false); onNext({}); }, 2000);
   };
 
   return (
     <div className="screen form-screen">
       <button className="back-btn" onClick={onBack}>{"< Back"}</button>
-      <div className="reg-progress"><div className="reg-bar" style={{width:"80%"}}/></div>
+      <div className="reg-progress"><div className="reg-bar" style={{ width: "80%" }} /></div>
       <div className="fcard">
         <div className="fhead"><div className="step-num">4 of 5</div><h2>Review, Agree And Pay</h2><p>Read the policy details before activating cover</p></div>
-        <div className="reg-success-card" style={{marginBottom:16}}>
+        <div className="reg-success-card" style={{ marginBottom: 16 }}>
           <div className="detail-row"><span>Name</span><span>{data.name || "Demo User"}</span></div>
           <div className="detail-row"><span>Platform</span><span>{data.platform || "Swiggy"}</span></div>
-          <div className="detail-row"><span>Plan</span><span style={{color:plan.color}}>{plan.name}</span></div>
+          <div className="detail-row"><span>Plan</span><span style={{ color: plan.color }}>{plan.name}</span></div>
           <div className="detail-row"><span>Coverage</span><span>{formatMoney(plan.coverage)}</span></div>
           <div className="detail-row"><span>Weekly premium</span><span>{formatMoney(plan.price)}</span></div>
         </div>
 
-        <div style={{maxHeight:260, overflowY:"auto", marginBottom:16, paddingRight:4}}>
+        <div style={{ maxHeight: 260, overflowY: "auto", marginBottom: 16, paddingRight: 4 }}>
           <PrivacyPolicyDetails compact language={data.preferredLanguage || "en"} />
         </div>
 
-        <label style={{display:"flex",gap:10,alignItems:"flex-start",fontSize:12,color:"var(--muted)",lineHeight:1.5,marginBottom:16}}>
-          <input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} style={{marginTop:2}} />
+        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12, color: "var(--muted)", lineHeight: 1.5, marginBottom: 16 }}>
+          <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} style={{ marginTop: 2 }} />
           <span>I agree to the policy, privacy use of data, payout rules, admin review workflow, and weekly renewal terms.</span>
         </label>
 
@@ -4601,15 +4601,15 @@ function LegacyRegistrationReviewStep({ data, onNext, onBack }) {
           <div className="pay-sub">first week premium • auto-renews weekly</div>
         </div>
 
-        {paying?(
-          <div className="paying-state"><div className="paying-spinner"/><p>Processing via {method}...</p></div>
-        ):(
+        {paying ? (
+          <div className="paying-state"><div className="paying-spinner" /><p>Processing via {method}...</p></div>
+        ) : (
           <div className="upi-options">
-            <button className="upi-btn" onClick={()=>handleUPI("phonepe")} disabled={!accepted}><span className="upi-icon">P</span> Pay with PhonePe</button>
-            <button className="upi-btn" onClick={()=>handleUPI("gpay")} disabled={!accepted}><span className="upi-icon">G</span> Pay with Google Pay</button>
+            <button className="upi-btn" onClick={() => handleUPI("phonepe")} disabled={!accepted}><span className="upi-icon">P</span> Pay with PhonePe</button>
+            <button className="upi-btn" onClick={() => handleUPI("gpay")} disabled={!accepted}><span className="upi-icon">G</span> Pay with Google Pay</button>
             <div className="upi-divider"><span>or enter UPI ID</span></div>
-            <div className="field" style={{margin:0}}><input placeholder="yourname@upi"/></div>
-            <button className="btn-primary" style={{marginTop:10}} onClick={()=>handleUPI("upi")} disabled={!accepted}>Pay {formatMoney(plan.price)} And Continue</button>
+            <div className="field" style={{ margin: 0 }}><input placeholder="yourname@upi" /></div>
+            <button className="btn-primary" style={{ marginTop: 10 }} onClick={() => handleUPI("upi")} disabled={!accepted}>Pay {formatMoney(plan.price)} And Continue</button>
           </div>
         )}
       </div>
@@ -4679,7 +4679,7 @@ function Reg1({ data, onNext, onBack }) {
         }
         phoneRecaptchaVerifierRef.current = new RecaptchaVerifier(auth, phoneRecaptchaContainerRef.current, {
           size: "invisible",
-          callback: () => {}
+          callback: () => { }
         });
         await phoneRecaptchaVerifierRef.current.render();
       }
@@ -4712,7 +4712,7 @@ function Reg1({ data, onNext, onBack }) {
       setPhoneOtp("");
       setPhoneOtpInfo("Phone OTP verified.");
       if (auth.currentUser) {
-        await signOut(auth).catch(() => {});
+        await signOut(auth).catch(() => { });
       }
     } catch (error) {
       setPhoneOtpError("Invalid OTP. Please try again.");
@@ -4931,9 +4931,9 @@ function Reg4({ data, onNext, onBack }) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.onloadedmetadata = async () => {
-          try { await videoRef.current.play(); } catch (error) {}
+          try { await videoRef.current.play(); } catch (error) { }
         };
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch(() => { });
       }
       setCameraOpen(true);
       setTimeout(() => {
@@ -5067,20 +5067,20 @@ function Reg5({ data, onNext, onBack }) {
         {PLANS.map(plan => {
           const planPreview = getRegistrationPremiumPreview(data, plan.id);
           return (
-          <button type="button" key={plan.id} className={`plan-card ${sel===plan.id?"selected":""}`} style={{ "--pc": plan.color }} onClick={() => setSel(plan.id)}>
-            {plan.recommended && <div className="plan-rec">Recommended</div>}
-            <div className="plan-top">
-              <div>
-                <div className="plan-name">{plan.name}</div>
-                <div className="plan-price">{formatMoney(planPreview.weekly)}<span>/week</span></div>
-                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>base {formatMoney(plan.price)}/week</div>
+            <button type="button" key={plan.id} className={`plan-card ${sel === plan.id ? "selected" : ""}`} style={{ "--pc": plan.color }} onClick={() => setSel(plan.id)}>
+              {plan.recommended && <div className="plan-rec">Recommended</div>}
+              <div className="plan-top">
+                <div>
+                  <div className="plan-name">{plan.name}</div>
+                  <div className="plan-price">{formatMoney(planPreview.weekly)}<span>/week</span></div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>base {formatMoney(plan.price)}/week</div>
+                </div>
+                <div className="plan-check">{sel === plan.id ? "OK" : ""}</div>
               </div>
-              <div className="plan-check">{sel===plan.id?"OK":""}</div>
-            </div>
-            <div className="plan-stats"><span>Coverage: {formatMoney(plan.coverage)}</span><span>{formatMoney(plan.payoutPerHour)}/hr</span></div>
-            <div className="plan-feats">{plan.features.map((feature, index) => <div key={index} className="plan-feat">- {feature}</div>)}</div>
-          </button>
-        );
+              <div className="plan-stats"><span>Coverage: {formatMoney(plan.coverage)}</span><span>{formatMoney(plan.payoutPerHour)}/hr</span></div>
+              <div className="plan-feats">{plan.features.map((feature, index) => <div key={index} className="plan-feat">- {feature}</div>)}</div>
+            </button>
+          );
         })}
       </div>
       <button className="btn-primary" style={{ marginTop: 12 }} onClick={() => onNext({ plan: sel, premiumPreview: preview.weekly })}>Next -></button>
@@ -5093,7 +5093,7 @@ function Reg6({ data, onNext, onBack }) {
   const [accepted, setAccepted] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentNotice, setPaymentNotice] = useState("");
-  const plan = PLANS.find(p=>p.id===data.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === data.plan) || PLANS[1];
   const dynamicWeekly = getRegistrationPremiumPreview(data, data.plan || "guard").weekly;
   const keyId = getRazorpayKeyId();
 
@@ -5183,7 +5183,7 @@ function Reg6({ data, onNext, onBack }) {
         </div>
 
         <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12, color: "var(--muted)", lineHeight: 1.5, marginBottom: 16 }}>
-          <input type="checkbox" checked={accepted} onChange={e=>setAccepted(e.target.checked)} style={{ marginTop: 2 }} />
+          <input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} style={{ marginTop: 2 }} />
           <span>I agree to the policy, privacy use of data, payout rules, admin review workflow, and weekly renewal terms.</span>
         </label>
 
@@ -5203,9 +5203,9 @@ function Reg6({ data, onNext, onBack }) {
           KYC note: test mode simulates payout. Live payout requires verified identity + UPI beneficiary validation.
         </div>
 
-        {paying?(
-          <div className="paying-state"><div className="paying-spinner"/><p>Opening Razorpay checkout...</p></div>
-        ):(
+        {paying ? (
+          <div className="paying-state"><div className="paying-spinner" /><p>Opening Razorpay checkout...</p></div>
+        ) : (
           <div className="upi-options">
             <button className="btn-primary" style={{ marginTop: 4 }} onClick={handleRazorpayPayment} disabled={!accepted}>
               Pay {formatMoney(dynamicWeekly)} With Razorpay
@@ -5229,7 +5229,7 @@ function Reg6({ data, onNext, onBack }) {
 }
 
 function Reg7({ data, onDone }) {
-  const plan = PLANS.find(p=>p.id===data.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === data.plan) || PLANS[1];
   const policyId = `GWW-${new Date().getFullYear()}-${(data.city || "CTY").replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3) || "CTY"}-${String(Date.now()).slice(-4)}`;
   const activatedPremium = data?.registrationPayment?.amount || data?.premiumPreview || getRegistrationPremiumPreview(data, data.plan || "guard").weekly;
   const isGraceFlow = String(data?.registrationPayment?.status || "").toLowerCase() === "grace";
@@ -5243,8 +5243,8 @@ function Reg7({ data, onDone }) {
       <h2 style={{ fontFamily: "var(--fd)", fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Policy Activated</h2>
       <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>Your income protection is live and the dashboard is ready</p>
       <div className="reg-success-card">
-        <div className="detail-row"><span>Name</span><span>{data.name||"Demo User"}</span></div>
-        <div className="detail-row"><span>Platform</span><span>{data.platform||"Swiggy"}</span></div>
+        <div className="detail-row"><span>Name</span><span>{data.name || "Demo User"}</span></div>
+        <div className="detail-row"><span>Platform</span><span>{data.platform || "Swiggy"}</span></div>
         <div className="detail-row"><span>Policy ID</span><span>{policyId}</span></div>
         <div className="detail-row"><span>Plan</span><span style={{ color: plan.color }}>{plan.name}</span></div>
         <div className="detail-row"><span>Coverage</span><span>{formatMoney(plan.coverage)}</span></div>
@@ -5403,7 +5403,7 @@ function UpgradeBillingScreen({ worker, onBack, onDone }) {
         {PLANS.map(p => {
           const estimatedWeekly = computeWorkerDynamicPremium({ ...worker, plan: p.id }).weekly;
           return (
-            <button key={p.id} className={`plan-card ${selectedPlan===p.id?"selected":""}`} style={{ "--pc": p.color }} onClick={() => setSelectedPlan(p.id)}>
+            <button key={p.id} className={`plan-card ${selectedPlan === p.id ? "selected" : ""}`} style={{ "--pc": p.color }} onClick={() => setSelectedPlan(p.id)}>
               {p.recommended && <div className="plan-rec">Recommended</div>}
               <div className="plan-top">
                 <div>
@@ -5411,16 +5411,16 @@ function UpgradeBillingScreen({ worker, onBack, onDone }) {
                   <div className="plan-price">{formatMoney(estimatedWeekly)}<span>/week</span></div>
                   <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>base {formatMoney(p.price)}/week</div>
                 </div>
-                <div className="plan-check">{selectedPlan===p.id?"OK":""}</div>
+                <div className="plan-check">{selectedPlan === p.id ? "OK" : ""}</div>
               </div>
               <div className="plan-stats"><span>Coverage: {formatMoney(p.coverage)}</span><span>{formatMoney(p.payoutPerHour)}/hr</span></div>
-              <div className="plan-feats">{p.features.map((f,i)=><div key={i} className="plan-feat">- {f}</div>)}</div>
+              <div className="plan-feats">{p.features.map((f, i) => <div key={i} className="plan-feat">- {f}</div>)}</div>
             </button>
           );
         })}
       </div>
-      <div style={{ background:"var(--card)", border:"1px solid var(--border)", borderRadius:14, padding:16, marginTop:12 }}>
-        <div style={{ fontSize: 12, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".06em", marginBottom:10 }}>Upgrade Billing Summary</div>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 16, marginTop: 12 }}>
+        <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Upgrade Billing Summary</div>
         <div className="detail-row"><span>Current billing week day</span><span>Day {breakdown.dayInCycle} / 7</span></div>
         <div className="detail-row"><span>Days left in current week</span><span>{breakdown.remainingDays} day(s)</span></div>
         <div className="detail-row"><span>Current plan prorated value</span><span>{formatMoney(breakdown.planCredit)}</span></div>
@@ -5452,15 +5452,15 @@ function Dashboard({ worker, balance, history, disruptions, activeTab, setActive
   return (
     <div className="dash-wrap">
       <div className="dash-content">
-        {activeTab==="home"     && <HomeTab worker={worker} balance={balance} history={history} disruptions={disruptions} online={online} queuedClaims={queuedClaims} onDisruption={onDisruption} onPolicy={onPolicy} onCalc={onCalc} theme={theme} toggleTheme={toggleTheme} language={language} setLanguage={setLanguage}/>}
-        {activeTab==="claims"   && <ClaimsTab worker={worker} history={history} queuedClaims={queuedClaims} language={language}/>}
-        {activeTab==="payments" && <PaymentsTab worker={worker} balance={balance} history={history} onWorkerUpdate={onWorkerUpdate} language={language}/>}
-        {activeTab==="alerts"   && <AlertsTab worker={worker} onWorkerUpdate={onWorkerUpdate} language={language}/>}
-        {activeTab==="profile"  && <ProfileTab worker={worker} balance={balance} history={history} onWorkerUpdate={onWorkerUpdate} onLogout={onLogout} language={language}/>}
+        {activeTab === "home" && <HomeTab worker={worker} balance={balance} history={history} disruptions={disruptions} online={online} queuedClaims={queuedClaims} onDisruption={onDisruption} onPolicy={onPolicy} onCalc={onCalc} theme={theme} toggleTheme={toggleTheme} language={language} setLanguage={setLanguage} />}
+        {activeTab === "claims" && <ClaimsTab worker={worker} history={history} queuedClaims={queuedClaims} language={language} />}
+        {activeTab === "payments" && <PaymentsTab worker={worker} balance={balance} history={history} onWorkerUpdate={onWorkerUpdate} language={language} />}
+        {activeTab === "alerts" && <AlertsTab worker={worker} onWorkerUpdate={onWorkerUpdate} language={language} />}
+        {activeTab === "profile" && <ProfileTab worker={worker} balance={balance} history={history} onWorkerUpdate={onWorkerUpdate} onLogout={onLogout} language={language} />}
       </div>
       <nav className="bottom-nav">
-        {[{id:"home",icon:"🏠",label:translate(language, "home", "Home")},{id:"claims",icon:"📋",label:translate(language, "claims", "Claims")},{id:"payments",icon:"💰",label:translate(language, "payments", "Payments")},{id:"alerts",icon:"🔔",label:translate(language, "alerts", "Alerts")},{id:"profile",icon:"👤",label:translate(language, "profile", "Profile")}].map(t=>(
-          <button key={t.id} className={`nav-btn ${activeTab===t.id?"active":""}`} onClick={()=>setActiveTab(t.id)}>
+        {[{ id: "home", icon: "🏠", label: translate(language, "home", "Home") }, { id: "claims", icon: "📋", label: translate(language, "claims", "Claims") }, { id: "payments", icon: "💰", label: translate(language, "payments", "Payments") }, { id: "alerts", icon: "🔔", label: translate(language, "alerts", "Alerts") }, { id: "profile", icon: "👤", label: translate(language, "profile", "Profile") }].map(t => (
+          <button key={t.id} className={`nav-btn ${activeTab === t.id ? "active" : ""}`} onClick={() => setActiveTab(t.id)}>
             <span className="nav-icon">{t.icon}</span>
             <span className="nav-label">{t.label}</span>
           </button>
@@ -5671,7 +5671,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
     await updateDoc(doc(db, "users", uid), {
       status,
       updatedAt: new Date().toISOString()
-    }).catch(() => {});
+    }).catch(() => { });
     setOpsNotice(`Worker ${uid.slice(0, 6)} status updated to ${status}.`);
     setTimeout(() => setOpsNotice(""), 2400);
   };
@@ -5681,7 +5681,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
     await updateDoc(doc(db, "users", uid), {
       flaggedForReview: true,
       updatedAt: new Date().toISOString()
-    }).catch(() => {});
+    }).catch(() => { });
     setOpsNotice(`Worker ${uid.slice(0, 6)} flagged for review.`);
     setTimeout(() => setOpsNotice(""), 2400);
   };
@@ -5694,7 +5694,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
           status: "suspended",
           fraudFlagged: true,
           updatedAt: new Date().toISOString()
-        }).catch(() => {})
+        }).catch(() => { })
       )
     );
     setOpsNotice(`Ring cluster blocked (${cluster.users.length} accounts).`);
@@ -5714,7 +5714,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
         continue;
       }
       if (uid) {
-        await deleteDoc(doc(db, "users", uid)).catch(() => {});
+        await deleteDoc(doc(db, "users", uid)).catch(() => { });
       }
     }
 
@@ -5722,7 +5722,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
       claims.map((claim) => {
         const userId = claim?.userId || "";
         if (keepUserIds.has(userId)) return Promise.resolve();
-        return deleteDoc(doc(db, "claims", claim.id)).catch(() => {});
+        return deleteDoc(doc(db, "claims", claim.id)).catch(() => { });
       })
     );
     setOpsNotice("Firestore cleanup done. (Auth user cleanup must be done from Firebase Authentication console.)");
@@ -5757,15 +5757,15 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
         lastPremiumPaidCycle: entry.ageDays < 7 ? "" : getBillingCycleKey(),
         history: Array.isArray(persona?.history)
           ? persona.history.map((claim) => ({
-              ...claim,
-              createdAt: claim?.createdAt || createdAt,
-              city: persona.city,
-              zone: persona.zone,
-              userId: uid,
-            }))
+            ...claim,
+            createdAt: claim?.createdAt || createdAt,
+            city: persona.city,
+            zone: persona.zone,
+            userId: uid,
+          }))
           : []
       };
-      await setDoc(doc(db, "users", uid), buildFirestoreUserProfile(seedWorker, uid, { role: "worker" }), { merge: true }).catch(() => {});
+      await setDoc(doc(db, "users", uid), buildFirestoreUserProfile(seedWorker, uid, { role: "worker" }), { merge: true }).catch(() => { });
       for (const claim of seedWorker.history || []) {
         const claimId = claim?.id || `CLM-${uid}-${Date.now()}`;
         await setDoc(doc(db, "claims", claimId), {
@@ -5779,7 +5779,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
           platform: seedWorker.platform,
           plan: seedWorker.plan,
           disruption: claim.type || claim.disruption || ""
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
       }
     }
     setOpsNotice("Demo personas seeded to Firestore.");
@@ -5971,7 +5971,7 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
 }
 
 function HomeTab({ worker, balance, history, disruptions, online, queuedClaims, onDisruption, onPolicy, onCalc, theme, toggleTheme, language, setLanguage }) {
-  const plan = PLANS.find(p=>p.id===worker.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === worker.plan) || PLANS[1];
   const billingCredit = worker.billingCredit || 0;
   const pendingPremiumDue = worker.pendingPremiumDue || 0;
   const graceDaysLeft = getGraceDaysLeft(worker);
@@ -5986,26 +5986,26 @@ function HomeTab({ worker, balance, history, disruptions, online, queuedClaims, 
   const cf = worker.premiumFactors?.cf ?? premium.factors.cf;
 
   return (
-    <div className="tab-screen">
+    <div className="tab-screen min-h-screen bg-gray-50 flex flex-col p-4 w-full max-w-md mx-auto relative rounded-2xl shadow-xl border border-gray-100 mt-4 overflow-hidden">
       <div className="home-header">
         <div>
           <div className="home-greet">{translate(language, "hey", "Hey")}, {localizeTerm(language, worker.name).split(" ")[0]} 👋</div>
           <div className="home-sub">{localizeTerm(language, worker.platform)} · {localizeTerm(language, worker.zone)}, {localizeTerm(language, worker.city)}</div>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <LanguageSelector language={language} setLanguage={setLanguage} compact />
-          <button onClick={toggleTheme} style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:14}}>
-            {theme==="dark"?"☀️":"🌙"}
+          <button onClick={toggleTheme} style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 8px", cursor: "pointer", fontSize: 14 }}>
+            {theme === "dark" ? "☀️" : "🌙"}
           </button>
           <div className="home-status">
-            {online?<span className="online-dot">●</span>:<span className="offline-dot">●</span>}
-            <span style={{fontSize:11,color:"var(--muted)"}}>{online?"Live":"Offline"}</span>
+            {online ? <span className="online-dot">●</span> : <span className="offline-dot">●</span>}
+            <span style={{ fontSize: 11, color: "var(--muted)" }}>{online ? "Live" : "Offline"}</span>
           </div>
         </div>
       </div>
 
       {!online && <div className="offline-card"><div className="offline-icon">📡</div><div><div className="offline-title">{translate(language, "offlineModeActive", "Offline Mode Active")}</div><div className="offline-sub">{translate(language, "claimsQueueSync", "Claims will queue and sync when connected")}</div></div></div>}
-      {queuedClaims.length>0 && <div className="queued-card"><span>⏳ {queuedClaims.length} {translate(language, "claimQueuedWillSync", "claim(s) queued • will sync when online")}</span></div>}
+      {queuedClaims.length > 0 && <div className="queued-card"><span>⏳ {queuedClaims.length} {translate(language, "claimQueuedWillSync", "claim(s) queued • will sync when online")}</span></div>}
 
       <div className="balance-card">
         <div className="bal-top">
@@ -6013,47 +6013,47 @@ function HomeTab({ worker, balance, history, disruptions, online, queuedClaims, 
             <div className="bal-label">{translate(language, "totalPayoutsReceived", "Total payouts received")}</div>
             <div className="bal-amt">₹{balance.toLocaleString()}</div>
           </div>
-          <div className="plan-pill" style={{background:`${plan.color}22`,color:plan.color}}>{plan.name}</div>
+          <div className="plan-pill" style={{ background: `${plan.color}22`, color: plan.color }}>{plan.name}</div>
         </div>
         <div className="bal-bottom"><span>₹{dynamicPremium}/week · {translate(language, "active", "Active")}</span><span>{translate(language, "since", "Since")} {worker.since}</span></div>
       </div>
 
       {paymentInGrace && (
-        <div style={{background:"linear-gradient(135deg,rgba(249,115,22,0.14),rgba(249,115,22,0.05))",border:"1px solid rgba(249,115,22,0.25)",borderRadius:14,padding:"12px 14px",marginBottom:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#F97316"}}>First Premium In Grace Mode</div>
-            <div style={{fontFamily:"var(--fd)",fontSize:15,fontWeight:800,color:"#F97316"}}>{graceDaysLeft} day(s) left</div>
+        <div style={{ background: "linear-gradient(135deg,rgba(249,115,22,0.14),rgba(249,115,22,0.05))", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#F97316" }}>First Premium In Grace Mode</div>
+            <div style={{ fontFamily: "var(--fd)", fontSize: 15, fontWeight: 800, color: "#F97316" }}>{graceDaysLeft} day(s) left</div>
           </div>
-          <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
+          <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
             You skipped onboarding payment. Complete Razorpay payment from Payments tab before grace expires.
           </div>
         </div>
       )}
 
       {/* Dynamic premium breakdown card */}
-      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:14,padding:14,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <div style={{fontSize:11,color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{translate(language, "thisWeeksPremium", "This Week's Premium")}</div>
-          <button onClick={onCalc} style={{fontSize:11,color:"var(--rain)",background:"none",border:"none",cursor:"pointer"}}>{translate(language, "fullCalculator", "Full Calculator")} -></button>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 14, marginBottom: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>{translate(language, "thisWeeksPremium", "This Week's Premium")}</div>
+          <button onClick={onCalc} style={{ fontSize: 11, color: "var(--rain)", background: "none", border: "none", cursor: "pointer" }}>{translate(language, "fullCalculator", "Full Calculator")} -></button>
         </div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div style={{fontFamily:"var(--fd)",fontSize:28,fontWeight:800}}>₹{dynamicPremium}</div>
-          <div style={{fontSize:12,color:diff>0?"#F97316":"#22c55e",fontWeight:600}}>{diff>0?`+₹${diff} vs base`:`₹${Math.abs(diff)} saved`}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontFamily: "var(--fd)", fontSize: 28, fontWeight: 800 }}>₹{dynamicPremium}</div>
+          <div style={{ fontSize: 12, color: diff > 0 ? "#F97316" : "#22c55e", fontWeight: 600 }}>{diff > 0 ? `+₹${diff} vs base` : `₹${Math.abs(diff)} saved`}</div>
         </div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <span style={{fontSize:10,background:`${cf>1?"rgba(249,115,22,0.1)":"rgba(34,197,94,0.1)"}`,color:cf>1?"#F97316":"#22c55e",padding:"2px 8px",borderRadius:6}}>City x{cf}</span>
-          <span style={{fontSize:10,background:`${zr>1?"rgba(249,115,22,0.1)":"rgba(34,197,94,0.1)"}`,color:zr>1?"#F97316":"#22c55e",padding:"2px 8px",borderRadius:6}}>Zone x{zr}</span>
-          <span style={{fontSize:10,background:`${pf>1?"rgba(249,115,22,0.1)":"rgba(34,197,94,0.1)"}`,color:pf>1?"#F97316":"#22c55e",padding:"2px 8px",borderRadius:6}}>{worker.platform} x{pf}</span>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 10, background: `${cf > 1 ? "rgba(249,115,22,0.1)" : "rgba(34,197,94,0.1)"}`, color: cf > 1 ? "#F97316" : "#22c55e", padding: "2px 8px", borderRadius: 6 }}>City x{cf}</span>
+          <span style={{ fontSize: 10, background: `${zr > 1 ? "rgba(249,115,22,0.1)" : "rgba(34,197,94,0.1)"}`, color: zr > 1 ? "#F97316" : "#22c55e", padding: "2px 8px", borderRadius: 6 }}>Zone x{zr}</span>
+          <span style={{ fontSize: 10, background: `${pf > 1 ? "rgba(249,115,22,0.1)" : "rgba(34,197,94,0.1)"}`, color: pf > 1 ? "#F97316" : "#22c55e", padding: "2px 8px", borderRadius: 6 }}>{worker.platform} x{pf}</span>
         </div>
       </div>
 
       {pendingPremiumDue > 0 && (
-        <div style={{background:"linear-gradient(135deg,rgba(249,115,22,0.14),rgba(249,115,22,0.05))",border:"1px solid rgba(249,115,22,0.25)",borderRadius:14,padding:"12px 14px",marginBottom:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#F97316"}}>Pending Premium Due</div>
-            <div style={{fontFamily:"var(--fd)",fontSize:18,fontWeight:800,color:"#F97316"}}>{formatMoney(pendingPremiumDue, language)}</div>
+        <div style={{ background: "linear-gradient(135deg,rgba(249,115,22,0.14),rgba(249,115,22,0.05))", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#F97316" }}>Pending Premium Due</div>
+            <div style={{ fontFamily: "var(--fd)", fontSize: 18, fontWeight: 800, color: "#F97316" }}>{formatMoney(pendingPremiumDue, language)}</div>
           </div>
-          <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
+          <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
             City/zone change increased risk premium. Settle from Payments tab.
           </div>
         </div>
@@ -6061,28 +6061,28 @@ function HomeTab({ worker, balance, history, disruptions, online, queuedClaims, 
 
       {/* Quick actions */}
       {/* Quick actions */}
-      <div style={{display:"flex",gap:8,marginBottom:16}}>
-        <button onClick={onPolicy} style={{flex:1,padding:"10px 8px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:12,color:"var(--text)",fontSize:12,cursor:"pointer",fontWeight:600}}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button onClick={onPolicy} style={{ flex: 1, padding: "10px 8px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text)", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
           {translate(language, "myPolicy", "My Policy")}
         </button>
-        <button onClick={onCalc} style={{flex:1,padding:"10px 8px",background:"var(--card)",border:"1px solid var(--border)",borderRadius:12,color:"var(--text)",fontSize:12,cursor:"pointer",fontWeight:600}}>
+        <button onClick={onCalc} style={{ flex: 1, padding: "10px 8px", background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--text)", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>
           {translate(language, "calculator", "Calculator")}
         </button>
       </div>
 
       {billingCredit > 0 && (
-        <div style={{background:"linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.04))",border:"1px solid rgba(34,197,94,0.25)",borderRadius:14,padding:"12px 14px",marginBottom:16}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#22c55e"}}>{translate(language, "queuedBillingCredit", "Queued Billing Credit")}</div>
-            <div style={{fontFamily:"var(--fd)",fontSize:18,fontWeight:800,color:"#22c55e"}}>{formatMoney(billingCredit)}</div>
+        <div style={{ background: "linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.04))", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 14, padding: "12px 14px", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#22c55e" }}>{translate(language, "queuedBillingCredit", "Queued Billing Credit")}</div>
+            <div style={{ fontFamily: "var(--fd)", fontSize: 18, fontWeight: 800, color: "#22c55e" }}>{formatMoney(billingCredit)}</div>
           </div>
-            <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
+          <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
             {translate(language, "creditHelpText", "This credit will be used on the next premium payment first. If any balance remains after payment, it stays queued for the following renewal.")}
           </div>
         </div>
       )}
 
-      {worker.alerts&&worker.alerts.length>0&&(
+      {worker.alerts && worker.alerts.length > 0 && (
         <div className="alert-banner">
           <span className="alert-icon">⚠️</span>
           <div><div className="alert-title">{translate(language, "liveDisruption", "Live disruption in")} {worker.zone}</div><div className="alert-sub">{worker.alerts[0].type} • {translate(language, "tapToClaim", "Tap below to claim")}</div></div>
@@ -6092,40 +6092,40 @@ function HomeTab({ worker, balance, history, disruptions, online, queuedClaims, 
       <div className="section-title">{translate(language, "disruptionClaimLabel", "File a disruption claim")}</div>
 
       {/* Payout tier legend */}
-      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px",marginBottom:10,fontSize:11}}>
-        <div style={{color:"var(--muted)",marginBottom:6,fontWeight:600}}>{translate(language, "payoutTiersLabel", "Payout tiers (based on fraud score)")}</div>
-        <div style={{display:"flex",gap:8}}>
-          <span style={{background:"rgba(34,197,94,0.1)",color:"#22c55e",padding:"2px 8px",borderRadius:6}}>0-40 → 100%</span>
-          <span style={{background:"rgba(249,115,22,0.1)",color:"#F97316",padding:"2px 8px",borderRadius:6}}>40-70 → 50%</span>
-          <span style={{background:"rgba(239,68,68,0.1)",color:"#EF4444",padding:"2px 8px",borderRadius:6}}>70+ → 0%</span>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", marginBottom: 10, fontSize: 11 }}>
+        <div style={{ color: "var(--muted)", marginBottom: 6, fontWeight: 600 }}>{translate(language, "payoutTiersLabel", "Payout tiers (based on fraud score)")}</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <span style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", padding: "2px 8px", borderRadius: 6 }}>0-40 → 100%</span>
+          <span style={{ background: "rgba(249,115,22,0.1)", color: "#F97316", padding: "2px 8px", borderRadius: 6 }}>40-70 → 50%</span>
+          <span style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", padding: "2px 8px", borderRadius: 6 }}>70+ → 0%</span>
         </div>
       </div>
 
       <div className="dis-grid">
-        {disruptions.map(d=>(
-          <button key={d.id} className="dis-card" onClick={()=>onDisruption(d)} style={{"--dc":d.color}}>
+        {disruptions.map(d => (
+          <button key={d.id} className="dis-card" onClick={() => onDisruption(d)} style={{ "--dc": d.color }}>
             <div className="dis-icon">{d.icon}</div>
             <div className="dis-label">{localizeTerm(language, d.label)}</div>
             <div className="dis-val">{localizeTerm(language, d.value)}</div>
             <div className="dis-pay">₹{d.amount}</div>
-            {!online&&<div className="dis-offline">{translate(language, "queuesOffline", "Queues offline")}</div>}
+            {!online && <div className="dis-offline">{translate(language, "queuesOffline", "Queues offline")}</div>}
           </button>
         ))}
       </div>
 
-      {history.length>0&&(
+      {history.length > 0 && (
         <>
           <div className="section-title">{translate(language, "recentClaims", "Recent claims")}</div>
-          {history.slice(0,2).map((h,i)=>(
+          {history.slice(0, 2).map((h, i) => (
             <div key={i} className="mini-claim">
               <div className="mc-left"><div className="mc-type">{localizeTerm(language, h.type)}</div><div className="mc-date">{localizeDate(language, h.date)}</div></div>
               <div className="mc-right">
-                <div className="mc-amt" style={{color:(h.status==="Paid"||h.status==="Partially Paid")?"#22c55e":(h.status==="Queued"||h.status==="Pending Review")?"#F97316":"#EF4444"}}>
-                  {h.status==="Paid"
+                <div className="mc-amt" style={{ color: (h.status === "Paid" || h.status === "Partially Paid") ? "#22c55e" : (h.status === "Queued" || h.status === "Pending Review") ? "#F97316" : "#EF4444" }}>
+                  {h.status === "Paid"
                     ? `+₹${h.amount}`
-                    : h.status==="Queued"
+                    : h.status === "Queued"
                       ? translate(language, "queued", "Queued")
-                      : h.status==="Pending Review"
+                      : h.status === "Pending Review"
                         ? "Pending Review"
                         : translate(language, "blocked", "Blocked")}
                 </div>
@@ -6140,30 +6140,30 @@ function HomeTab({ worker, balance, history, disruptions, online, queuedClaims, 
 }
 
 function ClaimsTab({ worker, history, queuedClaims, language }) {
-  const all = [...queuedClaims.map(q=>({...q,status:"Queued"})),...history];
+  const all = [...queuedClaims.map(q => ({ ...q, status: "Queued" })), ...history];
   const isCreditedStatus = (status) => status === "Paid" || status === "Partially Paid";
-  const approved = all.filter(h=>isCreditedStatus(h.status)).length;
-  const total = all.reduce((a,h)=>a+(h.amount||0),0);
+  const approved = all.filter(h => isCreditedStatus(h.status)).length;
+  const total = all.reduce((a, h) => a + (h.amount || 0), 0);
   return (
-    <div className="tab-screen">
+    <div className="tab-screen min-h-screen bg-gray-50 flex flex-col p-4 w-full max-w-md mx-auto relative rounded-2xl shadow-xl border border-gray-100 mt-4 overflow-hidden">
       <h2 className="tab-title">{translate(language, "claimsHistory", "Claims History")}</h2>
       <div className="stats-row-sm">
         <div className="stat-sm"><span className="sn">{all.length}</span><span className="sl">{translate(language, "total", "Total")}</span></div>
-        <div className="stat-sm"><span className="sn" style={{color:"#22c55e"}}>{approved}</span><span className="sl">{translate(language, "approved", "Approved")}</span></div>
-        <div className="stat-sm"><span className="sn" style={{color:"#3B82F6"}}>₹{total.toLocaleString()}</span><span className="sl">{translate(language, "received", "Received")}</span></div>
+        <div className="stat-sm"><span className="sn" style={{ color: "#22c55e" }}>{approved}</span><span className="sl">{translate(language, "approved", "Approved")}</span></div>
+        <div className="stat-sm"><span className="sn" style={{ color: "#3B82F6" }}>₹{total.toLocaleString()}</span><span className="sl">{translate(language, "received", "Received")}</span></div>
         <div className="stat-sm"><span className="sn">{translate(language, "instant", "Instant")}</span><span className="sl">{translate(language, "avgTime", "Avg time")}</span></div>
       </div>
       <div className="auto-flow">
-        {["Disruption Detected","Claim Triggered","Fraud Verified","Payout Released"].map((s,i)=>(
+        {["Disruption Detected", "Claim Triggered", "Fraud Verified", "Payout Released"].map((s, i) => (
           <div key={i} className="flow-step">
-            <div className="flow-num">{i+1}</div><div className="flow-label">{translate(language, s, s)}</div>
-            {i<3&&<div className="flow-arrow">→</div>}
+            <div className="flow-num">{i + 1}</div><div className="flow-label">{translate(language, s, s)}</div>
+            {i < 3 && <div className="flow-arrow">→</div>}
           </div>
         ))}
       </div>
-      {all.length===0&&<div className="empty-state">{translate(language, "noClaimsYet", "No claims yet. File your first claim from the home tab.")}</div>}
+      {all.length === 0 && <div className="empty-state">{translate(language, "noClaimsYet", "No claims yet. File your first claim from the home tab.")}</div>}
       <div className="claims-list">
-        {all.map((h,i)=>(
+        {all.map((h, i) => (
           <div key={i} className="claim-item">
             {(() => {
               const payoutStatus = h.status === "Paid" || h.status === "Partially Paid";
@@ -6171,34 +6171,34 @@ function ClaimsTab({ worker, history, queuedClaims, language }) {
               const statusColor = payoutStatus ? "#22c55e" : pendingStatus ? "#F97316" : "#EF4444";
               return (
                 <>
-            <div className="ci-top">
-              <div className="ci-type">{localizeTerm(language, h.type)}</div>
-              <div className="ci-amt" style={{color:statusColor}}>
-                {payoutStatus
-                  ? `+₹${h.amount}`
-                  : pendingStatus
-                    ? localizeTerm(language, h.status)
-                    : "₹0"}
-              </div>
-            </div>
-            <div className="ci-bottom">
-              <span>{localizeDate(language, h.date)} • {localizeDuration(language, h.duration)}</span>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span className="ci-score">{translate(language, "score", "Score")}: {h.score}</span>
-                <span className="ci-status" style={{background:payoutStatus?"rgba(34,197,94,0.12)":pendingStatus?"rgba(249,115,22,0.12)":"rgba(239,68,68,0.12)",color:statusColor}}>{localizeTerm(language, h.status)}</span>
-              </div>
-            </div>
-            {h.status==="Blocked"&&<div className="ci-reason">{translate(language, "blockedReason", "Fraud detection blocked this claim. Risk score too high.")}</div>}
-            {h.status==="Queued"&&<div className="ci-reason" style={{color:"#F97316"}}>{translate(language, "queuedReason", "Filed offline — will process when network returns.")}</div>}
-            {h.status==="Pending Review"&&(
-              <div className="ci-reason" style={{color:"#F97316"}}>
-                <div>Queued for verification. Target review in ~2 hours.</div>
-                {!!h.verificationEtaAt && <div style={{marginTop:4}}>ETA: {new Date(h.verificationEtaAt).toLocaleString("en-IN")}</div>}
-                {Array.isArray(h.verificationChecks) && h.verificationChecks.length > 0 && (
-                  <div style={{marginTop:4}}>Checks: {h.verificationChecks.join(" • ")}</div>
-                )}
-              </div>
-            )}
+                  <div className="ci-top">
+                    <div className="ci-type">{localizeTerm(language, h.type)}</div>
+                    <div className="ci-amt" style={{ color: statusColor }}>
+                      {payoutStatus
+                        ? `+₹${h.amount}`
+                        : pendingStatus
+                          ? localizeTerm(language, h.status)
+                          : "₹0"}
+                    </div>
+                  </div>
+                  <div className="ci-bottom">
+                    <span>{localizeDate(language, h.date)} • {localizeDuration(language, h.duration)}</span>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span className="ci-score">{translate(language, "score", "Score")}: {h.score}</span>
+                      <span className="ci-status" style={{ background: payoutStatus ? "rgba(34,197,94,0.12)" : pendingStatus ? "rgba(249,115,22,0.12)" : "rgba(239,68,68,0.12)", color: statusColor }}>{localizeTerm(language, h.status)}</span>
+                    </div>
+                  </div>
+                  {h.status === "Blocked" && <div className="ci-reason">{translate(language, "blockedReason", "Fraud detection blocked this claim. Risk score too high.")}</div>}
+                  {h.status === "Queued" && <div className="ci-reason" style={{ color: "#F97316" }}>{translate(language, "queuedReason", "Filed offline — will process when network returns.")}</div>}
+                  {h.status === "Pending Review" && (
+                    <div className="ci-reason" style={{ color: "#F97316" }}>
+                      <div>Queued for verification. Target review in ~2 hours.</div>
+                      {!!h.verificationEtaAt && <div style={{ marginTop: 4 }}>ETA: {new Date(h.verificationEtaAt).toLocaleString("en-IN")}</div>}
+                      {Array.isArray(h.verificationChecks) && h.verificationChecks.length > 0 && (
+                        <div style={{ marginTop: 4 }}>Checks: {h.verificationChecks.join(" • ")}</div>
+                      )}
+                    </div>
+                  )}
                 </>
               );
             })()}
@@ -6393,103 +6393,103 @@ function PaymentsTab({ worker, balance, history, onWorkerUpdate, language }) {
   };
 
   return (
-    <div className="tab-screen">
+    <div className="tab-screen min-h-screen bg-gray-50 flex flex-col p-4 w-full max-w-md mx-auto relative rounded-2xl shadow-xl border border-gray-100 mt-4 overflow-hidden">
       <h2 className="tab-title">{translate(language, "paymentsAndPayouts", "Payments And Payouts")}</h2>
       <div className="stats-row-sm">
-        <div className="stat-sm"><span className="sn" style={{color:"#22c55e"}}>₹{balance.toLocaleString()}</span><span className="sl">{translate(language, "totalPayouts", "Total payouts")}</span></div>
+        <div className="stat-sm"><span className="sn" style={{ color: "#22c55e" }}>₹{balance.toLocaleString()}</span><span className="sl">{translate(language, "totalPayouts", "Total payouts")}</span></div>
         <div className="stat-sm"><span className="sn">{formatMoney(outOfPocketPremium, language)}</span><span className="sl">Premium paid (own money)</span></div>
-        <div className="stat-sm"><span className="sn" style={{color:"#22c55e"}}>{formatMoney(premiumPaidFromCredits, language)}</span><span className="sl">Premium paid (credits)</span></div>
-        <div className="stat-sm"><span className="sn" style={{color:billingCredit>0?"#22c55e":"var(--text)"}}>{formatMoney(billingCredit, language)}</span><span className="sl">{translate(language, "billingCredit", "Billing credit")}</span></div>
+        <div className="stat-sm"><span className="sn" style={{ color: "#22c55e" }}>{formatMoney(premiumPaidFromCredits, language)}</span><span className="sl">Premium paid (credits)</span></div>
+        <div className="stat-sm"><span className="sn" style={{ color: billingCredit > 0 ? "#22c55e" : "var(--text)" }}>{formatMoney(billingCredit, language)}</span><span className="sl">{translate(language, "billingCredit", "Billing credit")}</span></div>
       </div>
-      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:14,padding:14,marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <div className="pr-title">Weekly Premium Status</div>
-          <div style={{fontFamily:"var(--fd)",fontSize:20,fontWeight:800,color:"#22d3ee"}}>{formatMoney(activePremium, language)}</div>
+          <div style={{ fontFamily: "var(--fd)", fontSize: 20, fontWeight: 800, color: "#22d3ee" }}>{formatMoney(activePremium, language)}</div>
         </div>
-        <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+        <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 10 }}>
           {paidThisCycle
             ? `Paid for current cycle (${currentCycle}). Next payment unlocks near week end.`
             : paymentInGrace
               ? `Grace mode active (${graceDaysLeft} day(s) left). First premium payment is pending.`
-            : premiumWindowOpen
-              ? `Payment window is open (day ${cycleContext.dayInCycle}/7).`
-              : `Payment window opens on day 6. Current day: ${cycleContext.dayInCycle}/7.`}
+              : premiumWindowOpen
+                ? `Payment window is open (day ${cycleContext.dayInCycle}/7).`
+                : `Payment window opens on day 6. Current day: ${cycleContext.dayInCycle}/7.`}
         </div>
         {!razorpayReady && (
-          <div style={{fontSize:12,color:"#F97316",lineHeight:1.5,marginBottom:10}}>
+          <div style={{ fontSize: 12, color: "#F97316", lineHeight: 1.5, marginBottom: 10 }}>
             Razorpay key not configured. Set <code>REACT_APP_RAZORPAY_KEY_ID</code> to enable cash premium payment.
           </div>
         )}
         {paymentNotice && (
-          <div style={{fontSize:12,color:"#22c55e",lineHeight:1.5,marginBottom:10}}>
+          <div style={{ fontSize: 12, color: "#22c55e", lineHeight: 1.5, marginBottom: 10 }}>
             {paymentNotice}
           </div>
         )}
         {paymentError && (
-          <div style={{fontSize:12,color:"#EF4444",lineHeight:1.5,marginBottom:10}}>
+          <div style={{ fontSize: 12, color: "#EF4444", lineHeight: 1.5, marginBottom: 10 }}>
             {paymentError}
           </div>
         )}
-        <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.55,marginBottom:10,background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,padding:"8px 10px"}}>
+        <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.55, marginBottom: 10, background: "var(--bg3)", border: "1px solid var(--border)", borderRadius: 10, padding: "8px 10px" }}>
           KYC/UPI compliance: live claim payouts are released only after beneficiary verification.
         </div>
-        <div style={{display:"flex",gap:8}}>
-          <button className="btn-primary" style={{padding:10,fontSize:13,flex:1}} onClick={() => applyRenewalPayment("Razorpay")} disabled={!canPayWeeklyPremium || paying}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn-primary" style={{ padding: 10, fontSize: 13, flex: 1 }} onClick={() => applyRenewalPayment("Razorpay")} disabled={!canPayWeeklyPremium || paying}>
             {paying
               ? "Processing payment..."
               : paidThisCycle
                 ? "Premium already paid this week"
                 : paymentInGrace
                   ? `Pay First Premium (${formatMoney(renewal.amountDueNow, language)})`
-                : canPayWeeklyPremium
-                  ? `Pay Weekly Premium (${formatMoney(renewal.amountDueNow, language)})`
-                  : "Payment window closed"}
+                  : canPayWeeklyPremium
+                    ? `Pay Weekly Premium (${formatMoney(renewal.amountDueNow, language)})`
+                    : "Payment window closed"}
           </button>
         </div>
       </div>
       {pendingPremiumDue > 0 && (
-        <div style={{background:"linear-gradient(135deg,rgba(249,115,22,0.14),rgba(249,115,22,0.05))",border:"1px solid rgba(249,115,22,0.25)",borderRadius:14,padding:14,marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <div className="pr-title" style={{color:"#F97316"}}>Pending Location Premium Due</div>
-            <div style={{fontFamily:"var(--fd)",fontSize:22,fontWeight:800,color:"#F97316"}}>{formatMoney(pendingPremiumDue, language)}</div>
+        <div style={{ background: "linear-gradient(135deg,rgba(249,115,22,0.14),rgba(249,115,22,0.05))", border: "1px solid rgba(249,115,22,0.25)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div className="pr-title" style={{ color: "#F97316" }}>Pending Location Premium Due</div>
+            <div style={{ fontFamily: "var(--fd)", fontSize: 22, fontWeight: 800, color: "#F97316" }}>{formatMoney(pendingPremiumDue, language)}</div>
           </div>
-          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6,marginBottom:10}}>
+          <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6, marginBottom: 10 }}>
             This was generated automatically when city/zone risk increased.
           </div>
-          <button className="btn-primary" style={{padding:10,fontSize:13}} onClick={() => settleLocationAdjustment("UPI")}>
+          <button className="btn-primary" style={{ padding: 10, fontSize: 13 }} onClick={() => settleLocationAdjustment("UPI")}>
             Settle Due Now
           </button>
         </div>
       )}
       {billingCredit > 0 && (
-        <div style={{background:"linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.04))",border:"1px solid rgba(34,197,94,0.25)",borderRadius:14,padding:14,marginBottom:12}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+        <div style={{ background: "linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.04))", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div className="pr-title">{translate(language, "queuedBillingCredit", "Queued Billing Credit")}</div>
-            <div style={{fontFamily:"var(--fd)",fontSize:22,fontWeight:800,color:"#22c55e"}}>{formatMoney(billingCredit, language)}</div>
+            <div style={{ fontFamily: "var(--fd)", fontSize: 22, fontWeight: 800, color: "#22c55e" }}>{formatMoney(billingCredit, language)}</div>
           </div>
-          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+          <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6 }}>
             {translate(language, "queuedCreditHelp", "Use queued credit first. If credit is more than the premium, the extra stays in queue for the next renewal.")}
           </div>
         </div>
       )}
-      <div style={{fontSize:12,color:"var(--muted)",marginBottom:14}}>
+      <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 14 }}>
         Net gain after premium out-of-pocket = {formatMoney(netGain, language)}.
       </div>
       <div className="section-title">Premium Payment History</div>
-      {premiumEvents.length===0&&<div className="empty-state">No premium payments recorded yet.</div>}
+      {premiumEvents.length === 0 && <div className="empty-state">No premium payments recorded yet.</div>}
       <div className="tx-list">
-        {premiumEvents.map((event,i)=>(
+        {premiumEvents.map((event, i) => (
           <div key={`premium-${i}`} className="tx-item">
             <div className="tx-left"><div className="tx-type">{event.type}</div><div className="tx-date">{event.date} • {event.detail}</div></div>
-            <div className="tx-amt" style={{color:event.direction==="credit"?"#22c55e":"#EF4444"}}>{event.direction==="credit"?`+${formatMoney(event.amount, language)}`:`-${formatMoney(event.amount, language)}`}</div>
+            <div className="tx-amt" style={{ color: event.direction === "credit" ? "#22c55e" : "#EF4444" }}>{event.direction === "credit" ? `+${formatMoney(event.amount, language)}` : `-${formatMoney(event.amount, language)}`}</div>
           </div>
         ))}
       </div>
 
       <div className="section-title">Claim Payout History</div>
-      {paidClaims.length===0&&<div className="empty-state">No claim payouts yet.</div>}
+      {paidClaims.length === 0 && <div className="empty-state">No claim payouts yet.</div>}
       <div className="tx-list">
-        {paidClaims.map((h,i)=>(
+        {paidClaims.map((h, i) => (
           <div key={i} className="tx-item">
             <div className="tx-left"><div className="tx-type">{translate(language, "claimPayout", "Claim Payout")} • {localizeTerm(language, h.type)}</div><div className="tx-date">{localizeDate(language, h.date)} • UPI</div></div>
             <div className="tx-amt">+₹{h.amount}</div>
@@ -6498,13 +6498,13 @@ function PaymentsTab({ worker, balance, history, onWorkerUpdate, language }) {
       </div>
 
       <div className="section-title">Credit Wallet Ledger</div>
-      {creditEvents.length===0&&<div className="empty-state">No credit ledger entries yet.</div>}
+      {creditEvents.length === 0 && <div className="empty-state">No credit ledger entries yet.</div>}
       <div className="tx-list">
-        {creditEvents.map((event,i)=>(
+        {creditEvents.map((event, i) => (
           <div key={`credit-${i}`} className="tx-item">
             <div className="tx-left"><div className="tx-type">{event.type}</div><div className="tx-date">{event.date} • {event.detail}</div></div>
-            <div className="tx-amt" style={{color:event.direction==="credit"?"#22c55e":"#EF4444"}}>
-              {event.direction==="credit" ? `+${formatMoney(event.amount, language)}` : `-${formatMoney(event.amount, language)}`}
+            <div className="tx-amt" style={{ color: event.direction === "credit" ? "#22c55e" : "#EF4444" }}>
+              {event.direction === "credit" ? `+${formatMoney(event.amount, language)}` : `-${formatMoney(event.amount, language)}`}
             </div>
           </div>
         ))}
@@ -6604,7 +6604,7 @@ function AlertsTab({ worker, onWorkerUpdate, language }) {
   };
 
   return (
-    <div className="tab-screen">
+    <div className="tab-screen min-h-screen bg-gray-50 flex flex-col p-4 w-full max-w-md mx-auto relative rounded-2xl shadow-xl border border-gray-100 mt-4 overflow-hidden">
       <h2 className="tab-title">{translate(language, "alerts", "Alerts")}</h2>
 
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: 12, marginBottom: 14 }}>
@@ -6667,9 +6667,9 @@ function AlertsTab({ worker, onWorkerUpdate, language }) {
 }
 
 function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, language }) {
-  const plan = PLANS.find(p=>p.id===worker.plan)||PLANS[1];
+  const plan = PLANS.find(p => p.id === worker.plan) || PLANS[1];
   const activeWeeklyPremium = getWorkerWeeklyPremium(worker);
-  const trustScore = 100 - worker.signals.reduce((a,s)=>a+s.raw,0);
+  const trustScore = 100 - worker.signals.reduce((a, s) => a + s.raw, 0);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: worker.name || "",
@@ -6734,7 +6734,7 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
         }
         profileRecaptchaVerifierRef.current = new RecaptchaVerifier(auth, profileOtpRecaptchaRef.current, {
           size: "invisible",
-          callback: () => {}
+          callback: () => { }
         });
         await profileRecaptchaVerifierRef.current.render();
       }
@@ -6832,13 +6832,13 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
 
       if (auth.currentUser) {
         if (nameChanged) {
-          try { await updateProfile(auth.currentUser, { displayName: updatedName }); } catch (e) {}
+          try { await updateProfile(auth.currentUser, { displayName: updatedName }); } catch (e) { }
         }
         if (emailChanged) {
-          try { await updateEmail(auth.currentUser, updatedEmail); } catch (e) {}
+          try { await updateEmail(auth.currentUser, updatedEmail); } catch (e) { }
         }
         if (form.password) {
-          try { await updatePassword(auth.currentUser, form.password); } catch (e) {}
+          try { await updatePassword(auth.currentUser, form.password); } catch (e) { }
         }
       }
 
@@ -6867,7 +6867,7 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       let profiles = {};
       try {
         profiles = JSON.parse(localStorage.getItem(profileKey) || "{}");
-      } catch (error) {}
+      } catch (error) { }
       if (uidValue && profiles[uidValue]) {
         delete profiles[uidValue];
       } else {
@@ -6885,10 +6885,10 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       if (auth.currentUser) {
         const uid = auth.currentUser.uid;
         await deleteUser(auth.currentUser);
-        await deleteDoc(doc(db, "users", uid)).catch(() => {});
+        await deleteDoc(doc(db, "users", uid)).catch(() => { });
         const claimSnap = await getDocs(query(collection(db, "claims"), where("userId", "==", uid))).catch(() => null);
         if (claimSnap?.docs?.length) {
-          await Promise.all(claimSnap.docs.map((claimDoc) => deleteDoc(doc(db, "claims", claimDoc.id)).catch(() => {})));
+          await Promise.all(claimSnap.docs.map((claimDoc) => deleteDoc(doc(db, "claims", claimDoc.id)).catch(() => { })));
         }
         cleanupLocal(uid);
       } else {
@@ -6913,12 +6913,12 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
   };
 
   return (
-    <div className="tab-screen">
+    <div className="tab-screen min-h-screen bg-gray-50 flex flex-col p-4 w-full max-w-md mx-auto relative rounded-2xl shadow-xl border border-gray-100 mt-4 overflow-hidden">
       <div className="profile-hero">
         <div className="ph-avatar">{worker.avatar}</div>
         <h2 className="ph-name">{localizeTerm(language, worker.name)}</h2>
         <div className="ph-meta">{localizeTerm(language, worker.platform)} · {localizeTerm(language, worker.city)}</div>
-        <div className="ph-tag" style={{color:worker.tagColor,borderColor:worker.tagColor}}>{localizeTerm(language, worker.tag)}</div>
+        <div className="ph-tag" style={{ color: worker.tagColor, borderColor: worker.tagColor }}>{localizeTerm(language, worker.tag)}</div>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
@@ -6998,7 +6998,7 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       </div>
       <div className="profile-section"><div className="ps-title">{translate(language, "currentPlanSection", "Current Plan")}</div>
         <div className="profile-card">
-          <div className="detail-row"><span>{localizeTerm(language, "Plan")}</span><span style={{color:plan.color,fontWeight:700}}>{plan.name}</span></div>
+          <div className="detail-row"><span>{localizeTerm(language, "Plan")}</span><span style={{ color: plan.color, fontWeight: 700 }}>{plan.name}</span></div>
           <div className="detail-row"><span>{translate(language, "weeklyPremium", "Weekly premium")}</span><span>{formatMoney(activeWeeklyPremium, language)}</span></div>
           <div className="detail-row"><span>{translate(language, "coverageAmount", "Coverage amount")}</span><span>₹{plan.coverage.toLocaleString()}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "Status")}</span><span className="safe-badge">{worker.accountPaused ? "Paused" : `${localizeTerm(language, "Active")} ✓`}</span></div>
@@ -7006,18 +7006,18 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       </div>
       <div className="profile-section"><div className="ps-title">{translate(language, "accountStatistics", "Account Statistics")}</div>
         <div className="profile-card">
-          <div className="detail-row"><span>{localizeTerm(language, "Total payouts")}</span><span style={{color:"#22c55e"}}>₹{balance.toLocaleString()}</span></div>
+          <div className="detail-row"><span>{localizeTerm(language, "Total payouts")}</span><span style={{ color: "#22c55e" }}>₹{balance.toLocaleString()}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "Total claims")}</span><span>{worker.totalClaims}</span></div>
-          <div className="detail-row"><span>{localizeTerm(language, "Trust score")}</span><span style={{color:trustScore>70?"#22c55e":trustScore>40?"#F97316":"#EF4444"}}>{Math.max(0,trustScore)}/100</span></div>
+          <div className="detail-row"><span>{localizeTerm(language, "Trust score")}</span><span style={{ color: trustScore > 70 ? "#22c55e" : trustScore > 40 ? "#F97316" : "#EF4444" }}>{Math.max(0, trustScore)}/100</span></div>
         </div>
       </div>
       <div className="profile-section"><div className="ps-title">{translate(language, "aiRiskProfile", "AI Risk Profile")}</div>
         <div className="profile-card">
-          {worker.signals.map((s,i)=>(
+          {worker.signals.map((s, i) => (
             <div key={i} className="detail-row">
               <span>{localizeTerm(language, s.signal)}</span>
-              <span style={{color:s.status==="pass"?"#22c55e":s.status==="warn"?"#F97316":"#EF4444",fontSize:12}}>
-                {s.status==="pass"?translate(language, "clean", "✓ Clean"):s.status==="warn"?translate(language, "watch", "⚠ Watch"):translate(language, "flagged", "✕ Flagged")}
+              <span style={{ color: s.status === "pass" ? "#22c55e" : s.status === "warn" ? "#F97316" : "#EF4444", fontSize: 12 }}>
+                {s.status === "pass" ? translate(language, "clean", "✓ Clean") : s.status === "warn" ? translate(language, "watch", "⚠ Watch") : translate(language, "flagged", "✕ Flagged")}
               </span>
             </div>
           ))}
@@ -7129,8 +7129,8 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
   return (
     <div className="screen claim-screen">
       <button className="back-btn" onClick={onBack}>← Back</button>
-      {!online&&<div className="offline-notice">📡 Offline — claim will queue and sync when connected</div>}
-      <div className="claim-hero" style={{"--dc":disruption.color}}>
+      {!online && <div className="offline-notice">📡 Offline — claim will queue and sync when connected</div>}
+      <div className="claim-hero" style={{ "--dc": disruption.color }}>
         <div className="claim-icon">{disruption.icon}</div>
         <h2>{disruption.label}</h2>
         <div className="claim-val">{disruption.value}</div>
@@ -7140,37 +7140,37 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
         <div className="detail-row"><span>Platform</span><span>{worker.platform}</span></div>
         <div className="detail-row"><span>Location</span><span>{worker.zone}, {worker.city}</span></div>
         <div className="detail-row"><span>Threshold</span><span>{disruption.threshold}</span></div>
-        <div className="detail-row"><span>Max payout</span><span style={{color:"#22c55e",fontWeight:700,fontSize:16}}>₹{disruption.amount}</span></div>
+        <div className="detail-row"><span>Max payout</span><span style={{ color: "#22c55e", fontWeight: 700, fontSize: 16 }}>₹{disruption.amount}</span></div>
         <div className="detail-row"><span>Premium status</span><span className="safe-badge" style={{ color: premiumStatusColor }}>{premiumStatusLabel}</span></div>
       </div>
-      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:11,color:"var(--muted)"}}>
-        <strong style={{color:"var(--text)"}}>Payout tiers:</strong> Score 0-40 → 100% • 40-70 → 50% • 70+ → 0%
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: 11, color: "var(--muted)" }}>
+        <strong style={{ color: "var(--text)" }}>Payout tiers:</strong> Score 0-40 → 100% • 40-70 → 50% • 70+ → 0%
       </div>
-      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:10,padding:"10px 12px",marginBottom:12,fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
-        <strong style={{color:"var(--text)"}}>Account maturity rule:</strong>{" "}
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "10px 12px", marginBottom: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+        <strong style={{ color: "var(--text)" }}>Account maturity rule:</strong>{" "}
         {maturityGate.status === "blocked"
           ? "Account age under 7 days -> claim auto-blocked."
           : maturityGate.status === "review"
             ? "Account age 7-30 days -> delayed verification queue."
             : "Account age 30+ days -> normal decision flow."}
       </div>
-      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",marginBottom:12,fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
-        <div style={{fontWeight:700,color:"var(--text)",marginBottom:6}}>IRDAI / DPDP Claim Consent</div>
-        <label style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:8}}>
-          <input type="checkbox" checked={locationConsent} onChange={(e)=>setLocationConsent(e.target.checked)} />
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px", marginBottom: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+        <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>IRDAI / DPDP Claim Consent</div>
+        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+          <input type="checkbox" checked={locationConsent} onChange={(e) => setLocationConsent(e.target.checked)} />
           <span>I allow one-time GPS capture for this claim event only.</span>
         </label>
-        <label style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:8}}>
-          <input type="checkbox" checked={kycConsent} onChange={(e)=>setKycConsent(e.target.checked)} />
+        <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+          <input type="checkbox" checked={kycConsent} onChange={(e) => setKycConsent(e.target.checked)} />
           <span>I confirm KYC/UPI identity checks can be used before payout release.</span>
         </label>
-        <label style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-          <input type="checkbox" checked={dataConsent} onChange={(e)=>setDataConsent(e.target.checked)} />
+        <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <input type="checkbox" checked={dataConsent} onChange={(e) => setDataConsent(e.target.checked)} />
           <span>I agree to claim data sharing for fraud detection and insurer audit trail.</span>
         </label>
       </div>
-      {gpsStatus && <div style={{fontSize:12,color:"#22c55e",marginBottom:8}}>{gpsStatus}</div>}
-      {claimError && <div style={{fontSize:12,color:"#EF4444",marginBottom:8}}>{claimError}</div>}
+      {gpsStatus && <div style={{ fontSize: 12, color: "#22c55e", marginBottom: 8 }}>{gpsStatus}</div>}
+      {claimError && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{claimError}</div>}
       <div className="claim-notice">Our AI will run 5 fraud detection signals before releasing the payout.</div>
       <button className="btn-primary" onClick={submitClaim} disabled={submitting || (!isDemoSimulation && !premiumPaidThisCycle && !paymentInGrace)}>
         {submitting ? "Submitting..." : "Submit Claim →"}
@@ -7180,49 +7180,49 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
 }
 
 function FraudAnalysis({ disruption, worker, claimMeta, online, onResult, onBack }) {
-  const [step, setStep]     = useState(0);
+  const [step, setStep] = useState(0);
   const [revealed, setRevealed] = useState(0);
-  const [score, setScore]   = useState(0);
+  const [score, setScore] = useState(0);
   const signals = useMemo(() => buildRuntimeClaimSignals(worker, disruption, claimMeta), [worker, disruption, claimMeta]);
   const isNewAccount = (worker?.totalClaims || 0) === 0 || String(worker?.age || "").toLowerCase().includes("new");
   const decision = getDecisionFromScore(score);
   const outcomeCopy = getOutcomeCopyFromDecision(decision, isNewAccount);
   const start = () => { setStep(1); setRevealed(0); setScore(0); };
   useEffect(() => {
-    if (step!==1) return;
-    if (revealed<signals.length) {
-      const t = setTimeout(()=>{setScore(s=>s+signals[revealed].raw);setRevealed(r=>r+1);},700);
-      return ()=>clearTimeout(t);
-    } else { const t=setTimeout(()=>setStep(2),600); return ()=>clearTimeout(t); }
-  }, [step,revealed,signals]);
-  const sIcon={pass:"✓",warn:"⚠",fail:"✕"};
-  const sColor={pass:"#22c55e",warn:"#F97316",fail:"#EF4444"};
-  const rc = decision==="safe"?"#22c55e":decision==="medium"?"#F97316":"#EF4444";
-  const sc = score<40?"#22c55e":score<70?"#F97316":"#EF4444";
-  const pct = decision==="safe"?100:decision==="medium"?50:0;
+    if (step !== 1) return;
+    if (revealed < signals.length) {
+      const t = setTimeout(() => { setScore(s => s + signals[revealed].raw); setRevealed(r => r + 1); }, 700);
+      return () => clearTimeout(t);
+    } else { const t = setTimeout(() => setStep(2), 600); return () => clearTimeout(t); }
+  }, [step, revealed, signals]);
+  const sIcon = { pass: "✓", warn: "⚠", fail: "✕" };
+  const sColor = { pass: "#22c55e", warn: "#F97316", fail: "#EF4444" };
+  const rc = decision === "safe" ? "#22c55e" : decision === "medium" ? "#F97316" : "#EF4444";
+  const sc = score < 40 ? "#22c55e" : score < 70 ? "#F97316" : "#EF4444";
+  const pct = decision === "safe" ? 100 : decision === "medium" ? 50 : 0;
   const payoutAmt = Math.round(disruption.amount * pct / 100);
 
   return (
     <div className="screen fraud-screen">
       <button className="back-btn" onClick={onBack}>← Back</button>
-      {!online&&<div className="offline-notice">📡 Offline — using cached signals</div>}
-      <div className="fraud-header" style={{"--rc":rc}}>
+      {!online && <div className="offline-notice">📡 Offline — using cached signals</div>}
+      <div className="fraud-header" style={{ "--rc": rc }}>
         <div className="fh-dis">{disruption.icon} {disruption.label} • {disruption.value}</div>
         <h2>AI Fraud Analysis</h2>
         <p>5-signal anti-spoofing check • {worker.name.split(" ")[0]}</p>
       </div>
-      {step===0&&(
+      {step === 0 && (
         <div className="fraud-idle">
-          <div style={{fontSize:52,marginBottom:14}}>🛡️</div>
+          <div style={{ fontSize: 52, marginBottom: 14 }}>🛡️</div>
           <p>Before releasing <strong>₹{disruption.amount}</strong>, our AI verifies 5 real-time signals for <strong>{worker.name.split(" ")[0]}</strong>.</p>
           <button className="btn-primary" onClick={start}>Run Fraud Analysis →</button>
         </div>
       )}
-      {(step===1||step===2)&&(
+      {(step === 1 || step === 2) && (
         <>
           <div className="score-box">
             <div className="sb-label">Risk Score</div>
-            <div className="sb-num" style={{color:sc}}>{score}</div>
+            <div className="sb-num" style={{ color: sc }}>{score}</div>
             <div className="sb-bands">
               <span className="band safe-band">0-40 → 100%</span>
               <span className="band warn-band">40-70 → 50%</span>
@@ -7230,37 +7230,37 @@ function FraudAnalysis({ disruption, worker, claimMeta, online, onResult, onBack
             </div>
           </div>
           <div className="signals">
-            {signals.map((sig,i)=>(
-              <div key={i} className={`sig-row ${i<revealed?"vis":"dim"}`}>
+            {signals.map((sig, i) => (
+              <div key={i} className={`sig-row ${i < revealed ? "vis" : "dim"}`}>
                 <div className="sr-left">
-                  <span className="sr-icon" style={{color:i<revealed?sColor[sig.status]:"var(--muted)"}}>{i<revealed?sIcon[sig.status]:"○"}</span>
-                  <div><div className="sr-name">{sig.signal}</div><div className="sr-detail">{i<revealed?sig.label:"Scanning..."}</div></div>
+                  <span className="sr-icon" style={{ color: i < revealed ? sColor[sig.status] : "var(--muted)" }}>{i < revealed ? sIcon[sig.status] : "○"}</span>
+                  <div><div className="sr-name">{sig.signal}</div><div className="sr-detail">{i < revealed ? sig.label : "Scanning..."}</div></div>
                 </div>
-                {i<revealed&&<span className="sr-score" style={{color:sig.raw>0?sColor[sig.status]:"#22c55e"}}>{sig.raw>0?`+${sig.raw}`:"+0"}</span>}
+                {i < revealed && <span className="sr-score" style={{ color: sig.raw > 0 ? sColor[sig.status] : "#22c55e" }}>{sig.raw > 0 ? `+${sig.raw}` : "+0"}</span>}
               </div>
             ))}
           </div>
-          {step===2&&(
-            <div className="fraud-result" style={{"--rc":rc}}>
-              <div className="fr-icon">{decision==="safe"?"✓":decision==="medium"?"⚠":"✕"}</div>
+          {step === 2 && (
+            <div className="fraud-result" style={{ "--rc": rc }}>
+              <div className="fr-icon">{decision === "safe" ? "✓" : decision === "medium" ? "⚠" : "✕"}</div>
               <div className="fr-outcome">{outcomeCopy.title}</div>
-              <div style={{fontSize:13,color:"var(--muted)",marginBottom:8}}>{outcomeCopy.detail}</div>
-              <div style={{background:"var(--bg3)",borderRadius:10,padding:"10px 12px",marginBottom:14,fontSize:12}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{color:"var(--muted)"}}>Claim amount</span><span>₹{disruption.amount}</span>
+              <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>{outcomeCopy.detail}</div>
+              <div style={{ background: "var(--bg3)", borderRadius: 10, padding: "10px 12px", marginBottom: 14, fontSize: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ color: "var(--muted)" }}>Claim amount</span><span>₹{disruption.amount}</span>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{color:"var(--muted)"}}>Risk score</span><span style={{color:sc}}>{score}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ color: "var(--muted)" }}>Risk score</span><span style={{ color: sc }}>{score}</span>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{color:"var(--muted)"}}>Payout eligibility</span><span style={{color:sc}}>{pct}%</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ color: "var(--muted)" }}>Payout eligibility</span><span style={{ color: sc }}>{pct}%</span>
                 </div>
-                <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:"1px solid var(--border)",fontWeight:700}}>
-                  <span>Settlement amount</span><span style={{color:rc,fontFamily:"var(--fd)",fontSize:16}}>₹{payoutAmt}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 6, borderTop: "1px solid var(--border)", fontWeight: 700 }}>
+                  <span>Settlement amount</span><span style={{ color: rc, fontFamily: "var(--fd)", fontSize: 16 }}>₹{payoutAmt}</span>
                 </div>
               </div>
-              <button className="btn-result" style={{background:rc}} onClick={()=>onResult(decision, score)}>
-                {decision==="safe"?"Release Payout →":decision==="medium"?"Delay & Verify →":"Block Claim →"}
+              <button className="btn-result" style={{ background: rc }} onClick={() => onResult(decision, score)}>
+                {decision === "safe" ? "Release Payout →" : decision === "medium" ? "Delay & Verify →" : "Block Claim →"}
               </button>
             </div>
           )}
@@ -7273,14 +7273,14 @@ function FraudAnalysis({ disruption, worker, claimMeta, online, onResult, onBack
 function QueuedScreen({ disruption, onDone }) {
   return (
     <div className="screen outcome-screen">
-      <div className="success-ring" style={{borderColor:"#F97316",background:"rgba(249,115,22,0.1)"}}><div className="check-icon" style={{color:"#F97316"}}>⏳</div></div>
+      <div className="success-ring" style={{ borderColor: "#F97316", background: "rgba(249,115,22,0.1)" }}><div className="check-icon" style={{ color: "#F97316" }}>⏳</div></div>
       <h2 className="oc-title">Claim Queued</h2>
       <p className="oc-sub">You're offline — saved to device</p>
-      <div className="oc-amount" style={{background:"rgba(249,115,22,0.08)",borderColor:"rgba(249,115,22,0.2)"}}>
-        <div className="oc-rupee" style={{color:"#F97316"}}>₹{disruption.amount}</div>
+      <div className="oc-amount" style={{ background: "rgba(249,115,22,0.08)", borderColor: "rgba(249,115,22,0.2)" }}>
+        <div className="oc-rupee" style={{ color: "#F97316" }}>₹{disruption.amount}</div>
         <div className="oc-note">pending sync</div>
       </div>
-      <div className="oc-footnote" style={{borderColor:"rgba(249,115,22,0.2)",background:"rgba(249,115,22,0.06)"}}>
+      <div className="oc-footnote" style={{ borderColor: "rgba(249,115,22,0.2)", background: "rgba(249,115,22,0.06)" }}>
         GigWeatherWage works offline. Your claim is saved and will auto-process when you're back online.
       </div>
       <button className="btn-primary" onClick={onDone}>Back to Dashboard →</button>
