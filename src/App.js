@@ -591,7 +591,7 @@ function isPaymentInGrace(worker = {}, nowMs = Date.now()) {
 }
 
 function getRazorpayKeyId() {
-  const configured = String(process.env.REACT_APP_RAZORPAY_KEY_ID || "rzp_test_demomode_default").trim();
+  const configured = String(process.env.REACT_APP_RAZORPAY_KEY_ID || "rzp_test_SerDhtQA5RYABF").trim();
   return configured;
 }
 
