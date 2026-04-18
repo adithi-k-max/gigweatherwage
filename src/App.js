@@ -591,7 +591,7 @@ function isPaymentInGrace(worker = {}, nowMs = Date.now()) {
 }
 
 function getRazorpayKeyId() {
-  const configured = String(process.env.REACT_APP_RAZORPAY_KEY_ID || "").trim();
+  const configured = String(process.env.REACT_APP_RAZORPAY_KEY_ID || "rzp_test_demomode_default").trim();
   return configured;
 }
 
@@ -698,19 +698,19 @@ function openRazorpayCheckout({ keyId, order, worker, amountRupees }) {
         ondismiss: () => reject(new Error("Payment cancelled by user."))
       }
     };
-    if (order?.id) {
-      if (order.id.startsWith("order_RC")) {
-        console.log("Mocking local Razorpay checkout success:", order.id);
+    if (order?.id || order?.localFallback) {
+      if ((order.id && order.id.startsWith("order_RC")) || order.localFallback) {
+        console.log("Mocking local Razorpay checkout success:", order.id || "local_fallback");
         setTimeout(() => {
           resolve({
             razorpay_payment_id: "pay_mock_" + Date.now(),
-            razorpay_order_id: order.id,
+            razorpay_order_id: order.id || "order_mock_" + Date.now(),
             razorpay_signature: "mock_signature_valid"
           });
         }, 1200);
         return;
       }
-      options.order_id = order.id;
+      if (order.id) options.order_id = order.id;
     }
 
     try {
