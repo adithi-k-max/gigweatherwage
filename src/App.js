@@ -5,6 +5,50 @@ import { auth, db } from "./firebase";
 import { RecaptchaVerifier, createUserWithEmailAndPassword, signInWithPhoneNumber, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, updateProfile, updateEmail, updatePassword, deleteUser, linkWithPhoneNumber } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from "firebase/firestore";
 
+
+// --- WEBRTC CAMERA COMPONENT ---
+function WebcamModal({ onCapture, onCancel }) {
+  const videoRef = useRef(null);
+  const [stream, setStream] = useState(null);
+
+  useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(s => {
+        setStream(s);
+        if (videoRef.current) videoRef.current.srcObject = s;
+      })
+      .catch(err => {
+        alert("Camera access denied or unavailable.");
+        onCancel();
+      });
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  const handleCapture = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth || 640;
+    canvas.height = videoRef.current.videoHeight || 480;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL("image/jpeg");
+    onCapture(dataUrl);
+  };
+
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "#000", zIndex: 99999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+      <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxHeight: "70vh", objectFit: "contain" }} />
+      <div style={{ display: "flex", gap: 20, marginTop: 20 }}>
+        <button onClick={handleCapture} style={{ padding: "12px 20px", background: "#22c55e", color: "#fff", borderRadius: 8, border: "none", fontWeight: "bold" }}>Take Photo</button>
+        <button onClick={onCancel} style={{ padding: "12px 20px", background: "#EF4444", color: "#fff", borderRadius: 8, border: "none", fontWeight: "bold" }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+// -------------------------------
+
 function useOnline() {
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {
@@ -5515,7 +5559,7 @@ function Reg6({ data, onNext, onBack }) {
           <div className="pay-amt">{formatMoney(dynamicWeekly)}</div>
           <div className="pay-sub">first week premium - auto-renews weekly</div>
         </div>
-        {!keyId.startsWith("rzp_") && (
+        {!keyId && (
           <div style={{ fontSize: 12, color: "#F97316", marginBottom: 10, lineHeight: 1.5 }}>
             Razorpay key not configured. Add <code>REACT_APP_RAZORPAY_KEY_ID</code> to continue.
           </div>
@@ -6681,7 +6725,7 @@ function PaymentsTab({ worker, balance, history, onWorkerUpdate, language }) {
   const totalClaimPayouts = paidClaims.reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const netGain = totalClaimPayouts - outOfPocketPremium;
   const razorpayKeyId = getRazorpayKeyId();
-  const razorpayReady = razorpayKeyId.startsWith("rzp_");
+  const razorpayReady = Boolean(razorpayKeyId);
   const [paymentNotice, setPaymentNotice] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [paying, setPaying] = useState(false);
@@ -7819,8 +7863,31 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
   const [idProofLast4, setIdProofLast4] = useState("");
   const [claimError, setClaimError] = useState("");
   const [gpsStatus, setGpsStatus] = useState("");
+  const [showCamera, setShowCamera] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const evidenceInputRef = useRef(null);
+
+  const handleWebcamCapture = (dataUrl) => {
+    setShowCamera(false);
+    setEvidenceImage(dataUrl);
+    setClaimError("");
+    setGpsStatus("Fetching GPS...");
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setClaimGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          setGpsStatus(`GPS Tagged: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
+        },
+        () => {
+          setGpsStatus("GPS Error - Using default city location.");
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    } else {
+      setGpsStatus("GPS not supported on this device.");
+    }
+  };
+
   const requiresExpedite = maturityGate.status !== "normal";
 
   const vehicleNumberLooksValid = /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/i.test(String(vehicleNumberInput || "").replace(/\s+/g, ""));
@@ -7976,11 +8043,12 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
           type="button"
           className="btn-outline"
           style={{ width: "100%", marginBottom: 6 }}
-          onClick={() => evidenceInputRef.current?.click()}
+          onClick={() => setShowCamera(true)}
         >
           {evidenceImage ? "Retake Claim Photo" : "Capture Claim Photo"}
         </button>
       </div>
+      {showCamera && <WebcamModal onCapture={handleWebcamCapture} onCancel={() => setShowCamera(false)} />}
       {requiresExpedite && (
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px", marginBottom: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
           <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Fast Verification For New Accounts</div>
