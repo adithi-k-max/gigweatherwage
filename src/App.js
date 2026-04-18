@@ -2,7 +2,7 @@
 import "./App.css";
 import { PLANS, DISRUPTIONS, PERSONAS, WEATHER_FORECAST } from "./data";
 import { auth, db } from "./firebase";
-import { RecaptchaVerifier, createUserWithEmailAndPassword, signInWithPhoneNumber, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, updateProfile, updateEmail, updatePassword, deleteUser } from "firebase/auth";
+import { RecaptchaVerifier, createUserWithEmailAndPassword, signInWithPhoneNumber, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, signOut, updateProfile, updateEmail, updatePassword, deleteUser, linkWithPhoneNumber } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from "firebase/firestore";
 
 function useOnline() {
@@ -323,6 +323,26 @@ function getVoiceLocale(language = "en") {
     ur: "ur-IN",
   };
   return map[language] || getLanguageLocale(language);
+}
+
+function getFirebaseAuthErrorMessage(error, fallback = "Something went wrong. Please try again.") {
+  const code = String(error?.code || "");
+  if (code === "auth/invalid-app-credential") {
+    return "OTP verification setup failed (invalid app credential). Reload once, disable VPN/ad-block, and ensure your current domain is added in Firebase Authentication -> Settings -> Authorized domains.";
+  }
+  if (code === "auth/captcha-check-failed") {
+    return "Captcha check failed. Please complete captcha again and retry.";
+  }
+  if (code === "auth/too-many-requests") {
+    return "Too many OTP attempts. Please wait a bit and retry.";
+  }
+  if (code === "auth/invalid-phone-number") {
+    return "Invalid phone number. Enter a valid 10-digit mobile number.";
+  }
+  if (code === "auth/quota-exceeded") {
+    return "SMS quota reached for this Firebase project. Try again later.";
+  }
+  return error?.message || fallback;
 }
 
 function detectLanguageCodeFromText(text = "", fallback = "en") {
@@ -1677,6 +1697,7 @@ function buildRuntimeClaimSignals(worker = {}, disruption = {}, claimMeta = null
     return category === "premium" && Number(event.amount || 0) > 0;
   });
   const claimGps = claimMeta?.gps || null;
+  const hasEvidence = Boolean(claimMeta?.evidenceImage);
   const cityPoint = getCityReferencePoint(worker?.city);
   const gpsDistance = claimGps ? haversineDistanceKm(claimGps, cityPoint) : null;
   const gpsRaw = gpsDistance === null ? 10 : gpsDistance > 35 ? 32 : gpsDistance > 15 ? 18 : 0;
@@ -1702,6 +1723,12 @@ function buildRuntimeClaimSignals(worker = {}, disruption = {}, claimMeta = null
       ? "Multiple claims in last 24h. Monitoring anomaly trend."
       : "Claim frequency is within expected pattern.";
 
+  const evidenceRaw = hasEvidence ? 0 : 25;
+  const evidenceStatus = hasEvidence ? "pass" : "fail";
+  const evidenceLabel = hasEvidence
+    ? "Geotagged claim image submitted."
+    : "No evidence image attached for this claim.";
+
   const maturityRaw = maturityGate.status === "blocked"
     ? 65
     : maturityGate.status === "review"
@@ -1719,6 +1746,7 @@ function buildRuntimeClaimSignals(worker = {}, disruption = {}, claimMeta = null
   const fallbackSignals = [
     { signal: "Weather API match", status: "pass", label: weatherMatch, raw: 0 },
     { signal: "GPS consistency", status: gpsStatus, label: gpsLabel, raw: gpsRaw },
+    { signal: "Claim evidence", status: evidenceStatus, label: evidenceLabel, raw: evidenceRaw },
     { signal: "Movement pattern", status: frequencyStatus, label: frequencyLabel, raw: frequencyRaw },
     { signal: "Device integrity", status: "pass", label: "No rooted/emulator indicators detected.", raw: 0 },
     { signal: "Account maturity", status: maturityStatus, label: maturityLabel, raw: maturityRaw },
@@ -1846,6 +1874,64 @@ const VEHICLE_PREMIUM_FACTORS = {
 
 function getRegistrationZones(city) {
   return REG_ZONE_OPTIONS[city] || ["Central Zone", "North Zone", "South Zone", "East Zone", "West Zone"];
+}
+
+function alphaCode(value = "", length = 3) {
+  const cleaned = String(value || "").replace(/[^A-Za-z]/g, "").toUpperCase();
+  if (!cleaned) return "XXX";
+  return cleaned.slice(0, length).padEnd(length, "X");
+}
+
+function getPlatformCode(platformName = "") {
+  const map = {
+    Swiggy: "SWG",
+    Zomato: "ZMT",
+    Zepto: "ZPT",
+    Blinkit: "BLK",
+    Amazon: "AMZ",
+    "BigBasket BB Now": "BBN",
+    "Swiggy Instamart": "SIM",
+    "JioMart Express": "JMX",
+    "Flipkart Minutes": "FKM",
+    "Nykaa Now": "NKN",
+    Dunzo: "DNZ",
+    Rapido: "RPD",
+    Uber: "UBR",
+    Ola: "OLA",
+    "Amazon Flex": "AFX",
+  };
+  return map[platformName] || alphaCode(platformName, 3);
+}
+
+function getCityCode(cityName = "") {
+  return alphaCode(cityName, 3);
+}
+
+function validatePartnerIdFormat(partnerId = "", platformName = "", cityName = "") {
+  const safeId = String(partnerId || "").trim().toUpperCase();
+  if (!safeId) {
+    return { valid: false, error: "Partner ID is required." };
+  }
+  const pattern = /^([A-Z]{3})-(20\d{2})-([A-Z]{3})-(\d{4})$/;
+  const match = safeId.match(pattern);
+  if (!match) {
+    return { valid: false, error: "Partner ID must match format: ABC-2026-XYZ-1234" };
+  }
+  const expectedPlatformCode = getPlatformCode(platformName);
+  const expectedCityCode = getCityCode(cityName);
+  if (match[1] !== expectedPlatformCode) {
+    return {
+      valid: false,
+      error: `Partner ID platform code must be ${expectedPlatformCode} for ${platformName}.`
+    };
+  }
+  if (match[3] !== expectedCityCode) {
+    return {
+      valid: false,
+      error: `Partner ID city code must be ${expectedCityCode} for ${cityName}.`
+    };
+  }
+  return { valid: true, normalized: safeId };
 }
 
 function cityPremiumFactor(cityName = "") {
@@ -1996,6 +2082,8 @@ function buildFirestoreUserProfile(workerProfile = {}, uid = "", overrides = {})
     zone: workerProfile?.zone || "",
     platform: workerProfile?.platform || "",
     vehicle: workerProfile?.vehicle || "",
+    vehicleNumber: workerProfile?.vehicleNumber || "",
+    vehicleDocs: workerProfile?.vehicleDocs || {},
     hours: workerProfile?.hours || "8-10 hrs/day",
     plan: workerProfile?.plan || "guard",
     planName: plan.name,
@@ -2006,6 +2094,9 @@ function buildFirestoreUserProfile(workerProfile = {}, uid = "", overrides = {})
     paymentStatus: workerProfile?.paymentStatus || "paid",
     paymentGraceUntil: workerProfile?.paymentGraceUntil || "",
     paymentDueAmount: Number(workerProfile?.paymentDueAmount || 0),
+    photoURL: workerProfile?.photoURL || workerProfile?.selfieImage || "",
+    liveTrackingEnabled: Boolean(workerProfile?.liveTrackingEnabled),
+    lastLiveLocation: workerProfile?.lastLiveLocation || null,
     totalClaims: Number(workerProfile?.totalClaims || 0),
     approvedClaims: Number(workerProfile?.approvedClaims || 0),
     balance: Number(workerProfile?.balance || 0),
@@ -2134,7 +2225,11 @@ export default function App() {
       const profileDoc = buildFirestoreUserProfile(finalWorker, auth.currentUser.uid, {
         role: String(finalWorker?.role || "worker")
       });
-      setDoc(doc(db, "users", auth.currentUser.uid), profileDoc, { merge: true }).catch(() => { });
+      setDoc(doc(db, "users", auth.currentUser.uid), profileDoc, { merge: true }).catch((error) => {
+        console.error("Firestore sync failed", error);
+        setSyncMsg("Could not sync profile to Firebase. Please check Firestore rules and retry.");
+        setTimeout(() => setSyncMsg(""), 3500);
+      });
     }
   };
 
@@ -2162,6 +2257,8 @@ export default function App() {
   const [adminError, setAdminError] = useState("");
   const recaptchaContainerRef = useRef(null);
   const recaptchaWidgetIdRef = useRef(null);
+  const liveTrackWatchIdRef = useRef(null);
+  const liveTrackLastSyncRef = useRef(0);
 
   // Apply theme
   useEffect(() => {
@@ -2196,11 +2293,15 @@ export default function App() {
   }, [online]);
 
   useEffect(() => {
-    if (screen === "otp" && authStage === "otp" && !otpSent && recaptchaContainerRef.current && !window.recaptchaVerifier) {
+    if (screen === "otp" && authStage === "otp" && !otpSent && recaptchaContainerRef.current) {
       try {
         auth.languageCode = "en";
+        if (window.recaptchaVerifier) {
+          try { window.recaptchaVerifier.clear(); } catch (error) { }
+          window.recaptchaVerifier = null;
+        }
         window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
-          size: "normal",
+          size: "invisible",
           callback: () => { }
         });
         window.recaptchaVerifier.render().then((widgetId) => {
@@ -2218,9 +2319,59 @@ export default function App() {
     }
   }, [screen, isAdminSession, worker]);
 
+  useEffect(() => {
+    if (liveTrackWatchIdRef.current !== null && navigator.geolocation?.clearWatch) {
+      navigator.geolocation.clearWatch(liveTrackWatchIdRef.current);
+      liveTrackWatchIdRef.current = null;
+    }
+    if (!worker || isAdminSession || !worker.liveTrackingEnabled) return;
+    if (!navigator.geolocation?.watchPosition) return;
+
+    liveTrackWatchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const liveLocation = {
+          lat: Number(position.coords.latitude.toFixed(6)),
+          lng: Number(position.coords.longitude.toFixed(6)),
+          accuracy: Math.round(position.coords.accuracy || 0),
+          capturedAt: new Date().toISOString()
+        };
+        setWorker((prev) => {
+          if (!prev) return prev;
+          const next = { ...prev, lastLiveLocation: liveLocation };
+          localStorage.setItem("gww_worker", JSON.stringify(next));
+          const nowTs = Date.now();
+          if (auth.currentUser?.uid && nowTs - liveTrackLastSyncRef.current > 30000) {
+            liveTrackLastSyncRef.current = nowTs;
+            setDoc(doc(db, "users", auth.currentUser.uid), {
+              lastLiveLocation: liveLocation,
+              liveTrackingEnabled: true,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(() => { });
+          }
+          return next;
+        });
+      },
+      () => { },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+
+    return () => {
+      if (liveTrackWatchIdRef.current !== null && navigator.geolocation?.clearWatch) {
+        navigator.geolocation.clearWatch(liveTrackWatchIdRef.current);
+        liveTrackWatchIdRef.current = null;
+      }
+    };
+  }, [worker?.id, worker?.liveTrackingEnabled, isAdminSession]);
+
   const loginAs = (w) => {
     setIsAdminSession(false);
-    persistWorker({ ...w, role: w?.role || "worker" });
+    const uid = auth.currentUser?.uid || w?.id || "";
+    persistWorker({
+      ...w,
+      id: uid || w?.id,
+      role: w?.role || "worker",
+      lastLoginAt: new Date().toISOString()
+    });
     setScreen("dashboard");
   };
 
@@ -2229,11 +2380,14 @@ export default function App() {
     const phoneDigits = (data.phone || "").replace(/\D/g, "").slice(-10);
     const nameParts = name.split(/\s+/).filter(Boolean);
     const avatar = nameParts.slice(0, 2).map(part => part[0]?.toUpperCase() || "").join("") || "GW";
-    const cityCode = (data.city || "City").replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3) || "CTY";
-    const platformCode = (data.platform || "GWW").replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 3) || "GWW";
+    const cityCode = getCityCode(data.city || "City");
+    const platformCode = getPlatformCode(data.platform || "GWW");
     const workerId = `user_${Date.now()}`;
     const policyID = `GWW-${new Date().getFullYear()}-${cityCode}-${String(Date.now()).slice(-4)}`;
-    const partnerId = data.partnerId?.trim() || `${platformCode}-${new Date().getFullYear()}-${cityCode}-${String(Date.now()).slice(-4)}`;
+    const partnerValidation = validatePartnerIdFormat(data.partnerId || "", data.platform || "", data.city || "");
+    const partnerId = partnerValidation.valid
+      ? partnerValidation.normalized
+      : `${platformCode}-${new Date().getFullYear()}-${cityCode}-${String(Date.now()).slice(-4)}`;
     const currentCycle = getBillingCycleKey();
     const selectedPlanId = data.plan || "guard";
     const initialWeeklyPremium = getRegistrationPremiumPreview(data, selectedPlanId).weekly;
@@ -2309,6 +2463,13 @@ export default function App() {
       paymentStatus: isGraceRegistration ? "grace" : "paid",
       paymentGraceUntil: graceUntil,
       paymentDueAmount: isGraceRegistration ? initialWeeklyPremium : 0,
+      photoURL: data.selfieImage || "",
+      selfieImage: data.selfieImage || "",
+      selfieCaptured: Boolean(data.selfieCaptured),
+      liveTrackingEnabled: true,
+      lastLiveLocation: null,
+      vehicleNumber: (data?.vehicleNumber || "").toUpperCase(),
+      vehicleDocs: data?.vehicleDocs || {},
     };
   };
 
@@ -2402,21 +2563,29 @@ export default function App() {
     setOtpLoading(true); setOtpError("");
     try {
       const phoneDigits = phone.replace(/\D/g, "").slice(-10);
+      if (phoneDigits.length !== 10) {
+        throw new Error("Enter a valid 10-digit phone number.");
+      }
       if (!recaptchaContainerRef.current) {
         throw new Error("reCAPTCHA container is not mounted.");
       }
 
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
-          size: "normal", callback: () => { }
-        });
-        await window.recaptchaVerifier.render();
+      auth.languageCode = "en";
+      if (window.recaptchaVerifier) {
+        try { window.recaptchaVerifier.clear(); } catch (error) { }
+        window.recaptchaVerifier = null;
       }
+      recaptchaContainerRef.current.innerHTML = "";
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
+        size: "invisible", callback: () => { }
+      });
+      const widgetId = await window.recaptchaVerifier.render();
+      recaptchaWidgetIdRef.current = widgetId;
       const formatted = "+91" + phoneDigits;
       const result = await signInWithPhoneNumber(auth, formatted, window.recaptchaVerifier);
       setConfirmResult(result); setOtpSent(true);
     } catch (err) {
-      setOtpError("Failed to send OTP. Complete the CAPTCHA and check your Firebase phone auth setup.");
+      setOtpError(getFirebaseAuthErrorMessage(err, "Failed to send OTP. Complete captcha and retry."));
     }
     finally {
       setOtpLoading(false);
@@ -2468,6 +2637,10 @@ export default function App() {
       setEmailError("Username not found on this device. Use your email instead.");
       return;
     }
+    if (safeEmail === ADMIN_DEFAULT_EMAIL) {
+      setEmailError("Admin accounts must use the Admin Login button. Worker login is not allowed for admin credentials.");
+      return;
+    }
 
     setEmailLoading(true);
     try {
@@ -2498,7 +2671,13 @@ export default function App() {
       if (loggedWorker?.username) {
         saveUsernameEmailIndex(loggedWorker.username, safeEmail);
       }
-      loginAs({ ...loggedWorker, role: "worker" });
+      const mergedWorker = { ...loggedWorker, id: credential.user.uid, role: "worker", lastLoginAt: new Date().toISOString() };
+      await setDoc(
+        doc(db, "users", credential.user.uid),
+        buildFirestoreUserProfile(mergedWorker, credential.user.uid, { role: "worker", lastLoginAt: mergedWorker.lastLoginAt }),
+        { merge: true }
+      );
+      loginAs(mergedWorker);
     } catch (err) {
       setEmailError("Email login failed. Check credentials.");
     } finally {
@@ -2579,7 +2758,7 @@ export default function App() {
         doc(db, "users", credential.user.uid),
         buildFirestoreUserProfile(newWorker, credential.user.uid, { role: "worker" }),
         { merge: true }
-      ).catch(() => { });
+      );
       saveEmailProfileForUser(credential.user.uid, newWorker);
       saveUsernameEmailIndex(safeUsername, safeEmail);
       loginAs(newWorker);
@@ -2603,9 +2782,17 @@ export default function App() {
   const handleClaimResult = async (decision, score) => {
     const accountAgeDays = getWorkerAccountAgeDays(worker);
     const isDemoSimulation = Boolean(claimMeta?.simulated);
-    const maturityGate = isDemoSimulation
+    const expedite = claimMeta?.expedite || {};
+    const maturityGateRaw = isDemoSimulation
       ? { status: "normal", label: "Demo simulation bypass" }
       : getAccountMaturityGate(accountAgeDays);
+    const maturityGate = !isDemoSimulation && expedite?.verified
+      ? maturityGateRaw.status === "blocked"
+        ? { status: "review", label: "Expedited documents submitted for early verification." }
+        : maturityGateRaw.status === "review"
+          ? { status: "normal", label: "Expedited documents verified for faster decision." }
+          : maturityGateRaw
+      : maturityGateRaw;
     const maturityDecision =
       maturityGate.status === "blocked"
         ? "high"
@@ -2618,6 +2805,7 @@ export default function App() {
     const gpsData = claimMeta?.gps || null;
     const claimConsent = claimMeta?.consent || null;
     const claimCapturedAt = claimMeta?.capturedAt || new Date().toISOString();
+    const claimEvidenceImage = claimMeta?.evidenceImage || "";
     const verificationEtaAt = status === "Pending Review"
       ? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
       : "";
@@ -2652,11 +2840,24 @@ export default function App() {
       time: "now",
       gps: gpsData,
       gpsError: claimMeta?.gpsError || "",
+      evidenceImage: claimEvidenceImage,
       consent: claimConsent,
+      expediteVerification: {
+        requested: Boolean(expedite?.requested),
+        verified: Boolean(expedite?.verified),
+        vehicleNumber: expedite?.vehicleNumber || "",
+        idLast4: expedite?.idLast4 || ""
+      },
       verificationStatus: status === "Pending Review" ? "Queued for verification" : "",
       verificationEtaAt,
       verificationChecks: status === "Pending Review"
-        ? ["GPS consistency", "Weather API match", "Device integrity", "Claim frequency pattern"]
+        ? [
+          "GPS consistency",
+          "Weather API match",
+          "Device integrity",
+          "Claim frequency pattern",
+          expedite?.verified ? "Fast verification docs accepted" : "Manual new-account verification"
+        ]
         : [],
       reviewReason: maturityGate.status === "blocked"
         ? "Account age below 7 days: claim blocked by eligibility lock."
@@ -2695,6 +2896,8 @@ export default function App() {
         approvedClaims: (worker.approvedClaims || 0) + (status === "Paid" ? 1 : 0),
         history: [claimRecord, ...(worker.history || [])],
         balance: (worker.balance || 0) + (status === "Paid" && online ? payout : 0),
+        vehicleNumber: expedite?.vehicleNumber || worker?.vehicleNumber || "",
+        quickVerificationEnabled: Boolean(expedite?.verified) || Boolean(worker?.quickVerificationEnabled)
       };
       setWorker(updatedWorker);
       localStorage.setItem("gww_worker", JSON.stringify(updatedWorker));
@@ -2789,7 +2992,40 @@ export default function App() {
       {syncMsg && <div className="sync-bar">{syncMsg}</div>}
 
       {screen === "splash" && <Splash />}
-      {screen === "landing" && <Landing onLogin={() => { setAuthStage("credentials"); setPendingEmailWorker(null); setOtpSent(false); setOtp(""); setOtpError(""); setConfirmResult(null); go("otp"); }} onRegister={() => go("reg1")} onAdmin={requestAdminAccess} theme={theme} toggleTheme={toggleTheme} language={language} setLanguage={setLanguage} />}
+      {screen === "landing" && <Landing onLogin={() => go("login-select")} onRegister={() => go("reg1")} theme={theme} toggleTheme={toggleTheme} language={language} setLanguage={setLanguage} />}
+      {screen === "login-select" && (
+        <div className="screen form-screen">
+          <button className="back-btn" onClick={() => go("landing")}>{"< Back"}</button>
+          <div className="fcard">
+            <div className="fhead">
+              <div className="step-num">Choose Access</div>
+              <h2>Login Portal</h2>
+              <p>Worker and admin access are separated for security.</p>
+            </div>
+            <button
+              className="btn-primary"
+              style={{ marginBottom: 10 }}
+              onClick={() => {
+                setAuthStage("credentials");
+                setPendingEmailWorker(null);
+                setOtpSent(false);
+                setOtp("");
+                setOtpError("");
+                setConfirmResult(null);
+                go("otp");
+              }}
+            >
+              Continue As Worker ->
+            </button>
+            <button className="btn-outline" onClick={requestAdminAccess}>
+              Continue As Admin
+            </button>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, lineHeight: 1.5 }}>
+              Admin dashboard is confidential and role-restricted.
+            </div>
+          </div>
+        </div>
+      )}
       {screen === "admin-login" && (
         <div className="screen form-screen">
           <button className="back-btn" onClick={() => go("landing")}>{"< Back"}</button>
@@ -2875,7 +3111,7 @@ export default function App() {
               </>
             ) : (
               <>
-                <div style={{ display: otpSent ? "none" : "flex", justifyContent: "center", marginBottom: 16, minHeight: 78 }}>
+                <div style={{ display: "none" }}>
                   <div id="recaptcha-container" ref={recaptchaContainerRef}></div>
                 </div>
                 {!otpSent ? (
@@ -2887,7 +3123,7 @@ export default function App() {
                         <input placeholder="9000000001" value={phone} onChange={e => setPhone(e.target.value)} maxLength={10} style={{ flex: 1 }} />
                       </div>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>Complete the "I am not a robot" captcha above, then press Send OTP.</div>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: 16, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>Press Send OTP and wait for the 6-digit code to arrive on your phone.</div>
                     {otpError && <div style={{ color: "#EF4444", fontSize: 13, marginBottom: 8 }}>{otpError}</div>}
                     <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6, background: "var(--bg3)", borderRadius: 10, padding: "10px 12px" }}>
                       <strong style={{ color: "var(--text)" }}>Test accounts:</strong><br />
@@ -4388,7 +4624,7 @@ function Splash() {
   );
 }
 
-function Landing({ onLogin, onRegister, onAdmin, theme, toggleTheme, language, setLanguage }) {
+function Landing({ onLogin, onRegister, theme, toggleTheme, language, setLanguage }) {
   return (
     <div className="screen landing-screen">
       <div className="rain-bg">{[...Array(16)].map((_, i) => <div key={i} className="drop" style={{ left: `${(i * 6.5) % 100}%`, animationDelay: `${(i * 0.2) % 2}s`, animationDuration: `${0.7 + (i % 4) * 0.2}s` }} />)}</div>
@@ -4410,15 +4646,9 @@ function Landing({ onLogin, onRegister, onAdmin, theme, toggleTheme, language, s
           <div className="lstat"><span className="lsn">Instant</span><span className="lsl">Payouts</span></div>
         </div>
         <div className="lbtns">
-          <button className="btn-primary" onClick={onLogin}>{translate(language, "login", "Login")} -></button>
+          <button className="btn-primary" onClick={onLogin}>{translate(language, "login", "Worker Login")} -></button>
           <button className="btn-outline" onClick={onRegister}>New Registration</button>
         </div>
-        <button
-          onClick={onAdmin}
-          style={{ marginTop: 10, background: "none", border: "none", color: "var(--muted)", fontSize: 12, cursor: "pointer" }}
-        >
-          Open Admin Dashboard
-        </button>
         <p className="lfooter">Team Code Alchemists • KL University</p>
       </div>
     </div>
@@ -4684,22 +4914,27 @@ function Reg1({ data, onNext, onBack }) {
     }
     setPhoneOtpLoading(true);
     try {
-      if (!phoneRecaptchaVerifierRef.current) {
-        if (!phoneRecaptchaContainerRef.current) {
-          throw new Error("OTP verifier not ready.");
-        }
-        phoneRecaptchaVerifierRef.current = new RecaptchaVerifier(auth, phoneRecaptchaContainerRef.current, {
-          size: "invisible",
-          callback: () => { }
-        });
-        await phoneRecaptchaVerifierRef.current.render();
+      auth.languageCode = "en";
+      if (!phoneRecaptchaContainerRef.current) {
+        throw new Error("OTP verifier not ready.");
       }
-      const confirmation = await signInWithPhoneNumber(auth, `+91${phoneDigits}`, phoneRecaptchaVerifierRef.current);
+      if (phoneRecaptchaVerifierRef.current) {
+        try { phoneRecaptchaVerifierRef.current.clear(); } catch (error) { }
+        phoneRecaptchaVerifierRef.current = null;
+      }
+      phoneRecaptchaContainerRef.current.innerHTML = "";
+      const verifier = new RecaptchaVerifier(auth, phoneRecaptchaContainerRef.current, {
+        size: "invisible",
+        callback: () => { }
+      });
+      phoneRecaptchaVerifierRef.current = verifier;
+      await verifier.render();
+      const confirmation = await signInWithPhoneNumber(auth, `+91${phoneDigits}`, verifier);
       setPhoneConfirmation(confirmation);
       setPhoneOtpSent(true);
       setPhoneOtpInfo(`OTP sent to +91${phoneDigits}.`);
     } catch (error) {
-      setPhoneOtpError(error?.message || "Could not send OTP. Check Firebase phone auth settings.");
+      setPhoneOtpError(getFirebaseAuthErrorMessage(error, "Could not send OTP. Check Firebase phone auth settings."));
     } finally {
       setPhoneOtpLoading(false);
     }
@@ -4836,8 +5071,23 @@ function Reg2({ data, onNext, onBack }) {
     partnerId: data?.partnerId || "",
     hours: data?.hours || "8-10 hrs/day",
     daysPerWeek: data?.daysPerWeek || 6,
-    vehicle: data?.vehicle || "Motorbike / Scooter"
+    vehicle: data?.vehicle || "Motorbike / Scooter",
+    vehicleNumber: data?.vehicleNumber || ""
   });
+  const [partnerError, setPartnerError] = useState("");
+  const expectedPlatformCode = getPlatformCode(d.platform);
+  const expectedCityCode = getCityCode(data?.city || "");
+  const partnerHint = `${expectedPlatformCode}-${new Date().getFullYear()}-${expectedCityCode}-1234`;
+
+  const handleNext = () => {
+    const validation = validatePartnerIdFormat(d.partnerId, d.platform, data?.city || "");
+    if (!validation.valid) {
+      setPartnerError(validation.error || "Invalid Partner ID format.");
+      return;
+    }
+    setPartnerError("");
+    onNext({ ...d, partnerId: validation.normalized });
+  };
 
   return (
     <div className="screen form-screen">
@@ -4850,7 +5100,21 @@ function Reg2({ data, onNext, onBack }) {
             {REG_PLATFORM_OPTIONS.map(platform => <option key={platform}>{platform}</option>)}
           </select>
         </div>
-        <div className="field"><label>Partner ID</label><input placeholder="e.g. SWG-2024-HYD-4521" value={d.partnerId} onChange={e => setD({ ...d, partnerId: e.target.value })} /></div>
+        <div className="field">
+          <label>Partner ID</label>
+          <input
+            placeholder={`e.g. ${partnerHint}`}
+            value={d.partnerId}
+            onChange={e => {
+              setPartnerError("");
+              setD({ ...d, partnerId: e.target.value.toUpperCase() });
+            }}
+          />
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>
+            Required format: <strong>{partnerHint}</strong>
+          </div>
+          {partnerError && <div style={{ color: "#EF4444", fontSize: 12, marginTop: 6 }}>{partnerError}</div>}
+        </div>
         <div className="field"><label>Daily working hours</label>
           <select value={d.hours} onChange={e => setD({ ...d, hours: e.target.value })}>
             {REG_HOUR_OPTIONS.map(hours => <option key={hours}>{hours}</option>)}
@@ -4866,7 +5130,15 @@ function Reg2({ data, onNext, onBack }) {
             {VEHICLES.map(vehicle => <option key={vehicle.name}>{vehicle.name}</option>)}
           </select>
         </div>
-        <button className="btn-primary" onClick={() => onNext(d)}>Next -></button>
+        <div className="field">
+          <label>Vehicle number</label>
+          <input
+            placeholder="e.g. TS09AB1234"
+            value={d.vehicleNumber}
+            onChange={(e) => setD({ ...d, vehicleNumber: e.target.value.toUpperCase().replace(/\s+/g, "") })}
+          />
+        </div>
+        <button className="btn-primary" onClick={handleNext}>Next -></button>
       </div>
     </div>
   );
@@ -4925,6 +5197,8 @@ function Reg4({ data, onNext, onBack }) {
 
   const openCamera = async () => {
     setCameraError("");
+    stopCamera();
+    setCameraOpen(true);
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Camera requires HTTPS or localhost security. Please click 'Upload Selfie Instead' below.");
@@ -4939,29 +5213,37 @@ function Reg4({ data, onNext, onBack }) {
         stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       }
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = async () => {
-          try { await videoRef.current.play(); } catch (error) { }
-        };
-        await videoRef.current.play().catch(() => { });
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      const video = videoRef.current;
+      if (!video) {
+        throw new Error("Camera preview not available. Use upload instead.");
       }
-      setCameraOpen(true);
+      video.srcObject = stream;
+      video.onloadedmetadata = async () => {
+        try { await video.play(); } catch (error) { }
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          setCameraError("");
+        }
+      };
+      video.oncanplay = () => {
+        if (video.videoWidth > 0 && video.videoHeight > 0) {
+          setCameraError("");
+        }
+      };
+      video.onerror = () => setCameraError("Camera preview failed. Use 'Upload Selfie Instead'.");
+      await video.play().catch(() => { });
       setTimeout(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        const ready = Number(video.videoWidth || 0) > 0 && Number(video.videoHeight || 0) > 0;
-        if (!ready) {
+        if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
           setCameraError("Live preview unavailable in this browser. Use 'Upload Selfie Instead'.");
         }
-      }, 900);
+      }, 1200);
     } catch (error) {
       setCameraError(error?.message || "Could not open camera.");
       setCameraOpen(false);
     }
   };
 
-  const captureSelfie = () => {
+  const captureSelfie = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -4972,6 +5254,19 @@ function Reg4({ data, onNext, onBack }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, width, height);
+    if ("FaceDetector" in window) {
+      try {
+        const detector = new window.FaceDetector({ maxDetectedFaces: 1, fastMode: true });
+        const bitmap = await createImageBitmap(canvas);
+        const faces = await detector.detect(bitmap);
+        if (!faces?.length) {
+          setCameraError("Face not detected clearly. Please align your face and capture again.");
+          return;
+        }
+      } catch (error) {
+        // Continue without hard-failing when detector is not supported by browser/runtime.
+      }
+    }
     const imageData = canvas.toDataURL("image/jpeg", 0.9);
     setSelfieImage(imageData);
     setSelfieReady(true);
@@ -5014,17 +5309,28 @@ function Reg4({ data, onNext, onBack }) {
             Camera API is used to capture a live baseline selfie for onboarding verification and future anti-fraud checks.
           </div>
         </div>
-        {cameraOpen && (
-          <div style={{ marginBottom: 12 }}>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{ width: "100%", minHeight: 220, objectFit: "cover", borderRadius: 12, border: "1px solid var(--border)", background: "#0b1020" }}
-            />
-          </div>
-        )}
+        <div style={{ marginBottom: 12 }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{
+              width: "100%",
+              minHeight: 220,
+              objectFit: "cover",
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              background: "#0b1020",
+              display: cameraOpen ? "block" : "none"
+            }}
+          />
+          {!cameraOpen && (
+            <div style={{ minHeight: 220, borderRadius: 12, border: "1px dashed var(--border)", background: "rgba(10,15,30,0.6)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted)", fontSize: 12 }}>
+              Camera preview appears here
+            </div>
+          )}
+        </div>
         <canvas ref={canvasRef} style={{ display: "none" }} />
         {cameraError && <div style={{ color: "#EF4444", fontSize: 12, marginBottom: 10 }}>{cameraError}</div>}
         <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
@@ -5044,7 +5350,13 @@ function Reg4({ data, onNext, onBack }) {
         <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
           Stored concept: baseline face vector, timestamp, onboarding device reference, and consent marker for anti-fraud review.
         </div>
-        <button className="btn-primary" onClick={() => onNext({ selfieCaptured: true, selfieReferenceStatus: "Baseline stored", selfieImage })} disabled={!selfieReady}>Next -></button>
+        <button
+          className="btn-primary"
+          onClick={() => onNext({ selfieCaptured: true, selfieReferenceStatus: "Baseline stored", selfieImage, photoURL: selfieImage })}
+          disabled={!selfieReady}
+        >
+          Next ->
+        </button>
       </div>
     </div>
   );
@@ -5653,6 +5965,42 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
   const predictedPayout = Math.round(predictedClaims * avgPaidClaimAmount);
   const recommendedTopUp = Math.max(0, predictedPayout - Math.max(0, poolBalance + weeklyPremiumCollected));
 
+  const trendMap = {};
+  const trendDays = Array.from({ length: 7 }).map((_, idx) => {
+    const day = new Date(Date.now() - (6 - idx) * 24 * 60 * 60 * 1000);
+    const key = day.toISOString().slice(0, 10);
+    trendMap[key] = { key, label: day.toLocaleDateString("en-US", { weekday: "short" }), premium: 0, payout: 0 };
+    return trendMap[key];
+  });
+
+  claims.forEach((claim) => {
+    const key = String(claim?.createdAt || claim?.date || "").slice(0, 10);
+    if (!trendMap[key]) return;
+    const status = String(claim?.status || "");
+    if (status === "Paid" || status === "Partially Paid") {
+      trendMap[key].payout += Number(claim?.amount || 0);
+    }
+  });
+
+  workers.forEach((item) => {
+    const events = Array.isArray(item?.billingEvents) ? item.billingEvents : [];
+    events.forEach((event) => {
+      const key = String(event?.date || "").length > 10
+        ? String(event.date).slice(0, 10)
+        : (() => {
+          const parsed = Date.parse(String(event?.date || ""));
+          return Number.isFinite(parsed) ? new Date(parsed).toISOString().slice(0, 10) : "";
+        })();
+      if (!trendMap[key]) return;
+      const category = getBillingEventCategory(event);
+      if ((category === "premium" || category === "premium_adjustment") && String(event?.direction || "").toLowerCase() === "debit") {
+        trendMap[key].premium += Number(event?.amount || 0);
+      }
+    });
+  });
+
+  const trendPeak = Math.max(1, ...trendDays.map((item) => Math.max(item.premium, item.payout)));
+
   const ringClusters = Object.values(
     claims.reduce((acc, claim) => {
       const gps = claim?.gps;
@@ -5709,6 +6057,28 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
       )
     );
     setOpsNotice(`Ring cluster blocked (${cluster.users.length} accounts).`);
+    setTimeout(() => setOpsNotice(""), 2400);
+  };
+
+  const broadcastRainAlert = async () => {
+    if (!workers.length) return;
+    const confirmed = window.confirm("Broadcast demo rain alert to all worker profiles?");
+    if (!confirmed) return;
+    const nowIso = new Date().toISOString();
+    await Promise.all(
+      workers.map((item) => {
+        const uid = item.uid || item.id;
+        if (!uid) return Promise.resolve();
+        return updateDoc(doc(db, "users", uid), {
+          alerts: [
+            { type: "Heavy Rain Warning", zone: item.zone || "Central Zone", prob: 82, time: "Next 4 hours", color: "#EF4444" }
+          ],
+          demoRainBroadcastAt: nowIso,
+          updatedAt: nowIso
+        }).catch(() => { });
+      })
+    );
+    setOpsNotice("Rain alert broadcasted to all worker profiles.");
     setTimeout(() => setOpsNotice(""), 2400);
   };
 
@@ -5836,6 +6206,25 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
         <div className="detail-row"><span>Recommended pool top-up</span><span style={{ color: recommendedTopUp > 0 ? "#F97316" : "#22c55e", fontWeight: 700 }}>{formatMoney(recommendedTopUp)}</span></div>
       </div>
 
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>7-Day Premium vs Payout Trend</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 8, alignItems: "end", minHeight: 120 }}>
+          {trendDays.map((item) => (
+            <div key={item.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <div style={{ display: "flex", gap: 2, alignItems: "end", height: 82 }}>
+                <div title={`Premium ${formatMoney(item.premium)}`} style={{ width: 8, height: `${Math.max(6, Math.round((item.premium / trendPeak) * 80))}px`, background: "#22c55e", borderRadius: 999 }} />
+                <div title={`Payout ${formatMoney(item.payout)}`} style={{ width: 8, height: `${Math.max(6, Math.round((item.payout / trendPeak) * 80))}px`, background: "#3B82F6", borderRadius: 999 }} />
+              </div>
+              <div style={{ fontSize: 10, color: "var(--muted)" }}>{item.label}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8 }}>
+          <span style={{ color: "#22c55e", fontWeight: 700 }}>■</span> Premium collection
+          <span style={{ marginLeft: 10, color: "#3B82F6", fontWeight: 700 }}>■</span> Claim payouts
+        </div>
+      </div>
+
       {demoMode && (
         <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>Demo Trigger</div>
@@ -5853,8 +6242,14 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
               Load Worker
             </button>
             <button className="btn-primary" style={{ flex: 1 }} onClick={() => onSimulateRain?.(selectedDemoWorker)} disabled={!selectedDemoWorker}>
-              Simulate Rain Event
+              Simulate Rain Claim
             </button>
+          </div>
+          <button className="btn-outline" style={{ width: "100%", marginTop: 8 }} onClick={broadcastRainAlert}>
+            Broadcast Rain Alert (All Workers)
+          </button>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, lineHeight: 1.5 }}>
+            Simulate Rain Claim = opens claim flow for selected worker only. Broadcast Rain Alert = pushes alert card to all workers.
           </div>
         </div>
       )}
@@ -5902,23 +6297,44 @@ function AdminDashboard({ worker, currentHistory = [], onBack, onSimulateRain, o
             <div><strong>Decision:</strong> {selectedClaim.status || "-"}</div>
             <div><strong>GPS:</strong> {selectedClaim?.gps?.lat ? `${selectedClaim.gps.lat}, ${selectedClaim.gps.lng}` : "Unavailable"}</div>
             <div><strong>Timestamp:</strong> {selectedClaim.createdAt || selectedClaim.date || "-"}</div>
+            {!!selectedClaim?.evidenceImage && (
+              <div style={{ marginTop: 6 }}>
+                <a href={selectedClaim.evidenceImage} target="_blank" rel="noreferrer" style={{ color: "var(--rain)" }}>
+                  View evidence image
+                </a>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
-        <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 8 }}>City Risk Heatmap</div>
-        <div style={{ display: "grid", gap: 6 }}>
-          {cityStats.map((row) => (
-            <div key={row.city} style={{ display: "grid", gridTemplateColumns: "1.2fr .8fr .8fr .8fr .8fr", gap: 8, fontSize: 11, padding: "8px 10px", borderRadius: 8, background: row.weatherRisk === "HIGH" ? "rgba(239,68,68,0.08)" : row.weatherRisk === "MEDIUM" ? "rgba(249,115,22,0.08)" : "rgba(34,197,94,0.08)" }}>
-              <span>{row.city}</span>
-              <span>W: {row.workers}</span>
-              <span>C: {row.claimsThisWeek}</span>
-              <span>F: {row.fraudAttempts}</span>
-              <span>{row.weatherRisk}</span>
-            </div>
-          ))}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".06em" }}>Event Volume by Disruption</div>
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>Totals from recent claims</div>
         </div>
+        {(() => {
+          const disruptionCounts = DISRUPTIONS.map((item) => {
+            const count = claims.filter((claim) => {
+              const target = String(claim?.disruption || claim?.type || "").toLowerCase();
+              const label = String(item.label || "").toLowerCase();
+              return target.includes(label.split(" ")[0]) || target.includes(label);
+            }).length;
+            return { ...item, count };
+          });
+          const maxCount = Math.max(...disruptionCounts.map((item) => item.count), 1);
+          return disruptionCounts.map((item) => (
+            <div key={item.id} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
+                <span><span style={{ marginRight: 8 }}>{item.icon}</span>{item.label}</span>
+                <span>{item.count} claims</span>
+              </div>
+              <div style={{ height: 10, borderRadius: 9999, background: "rgba(255,255,255,0.08)" }}>
+                <div style={{ height: "100%", width: `${Math.round((item.count / maxCount) * 100)}%`, background: item.color, borderRadius: 9999 }} />
+              </div>
+            </div>
+          ));
+        })()}
       </div>
 
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 14, padding: 14, marginBottom: 12 }}>
@@ -6208,6 +6624,13 @@ function ClaimsTab({ worker, history, queuedClaims, language }) {
                       {Array.isArray(h.verificationChecks) && h.verificationChecks.length > 0 && (
                         <div style={{ marginTop: 4 }}>Checks: {h.verificationChecks.join(" • ")}</div>
                       )}
+                    </div>
+                  )}
+                  {h.evidenceImage && (
+                    <div style={{ marginTop: 6 }}>
+                      <a href={h.evidenceImage} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: "var(--rain)" }}>
+                        View geotagged claim image
+                      </a>
                     </div>
                   )}
                 </>
@@ -6678,9 +7101,9 @@ function AlertsTab({ worker, onWorkerUpdate, language }) {
 }
 
 function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, language }) {
-  const plan = PLANS.find(p => p.id === worker.plan) || PLANS[1];
+  const plan = PLANS.find(p => p.id === worker?.plan) || PLANS[1];
   const activeWeeklyPremium = getWorkerWeeklyPremium(worker);
-  const trustScore = 100 - worker.signals.reduce((a, s) => a + s.raw, 0);
+  const trustScore = 100 - (Array.isArray(worker?.signals) ? worker.signals.reduce((a, s) => a + (s.raw || 0), 0) : 0);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     name: worker.name || "",
@@ -6689,11 +7112,15 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
     platform: worker.platform || "Swiggy",
     hours: worker.hours || "8-10 hrs/day",
     vehicle: worker.vehicle || "Motorbike / Scooter",
+    vehicleNumber: worker.vehicleNumber || "",
     city: worker.city || "Hyderabad",
     zone: worker.zone || getRegistrationZones(worker.city || "Hyderabad")[0],
+    liveTrackingEnabled: Boolean(worker.liveTrackingEnabled),
     password: "",
     confirmPassword: "",
   });
+  const [profilePhoto, setProfilePhoto] = useState(worker.photoURL || worker.selfieImage || "");
+  const [vehicleDocs, setVehicleDocs] = useState(worker.vehicleDocs || {});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -6704,6 +7131,16 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
   const [phoneOtpConfirmation, setPhoneOtpConfirmation] = useState(null);
   const profileOtpRecaptchaRef = useRef(null);
   const profileRecaptchaVerifierRef = useRef(null);
+  const docCameraVideoRef = useRef(null);
+  const docCameraCanvasRef = useRef(null);
+  const docCameraStreamRef = useRef(null);
+  const [docCameraOpen, setDocCameraOpen] = useState(false);
+  const [docCameraError, setDocCameraError] = useState("");
+  const [docCameraGeo, setDocCameraGeo] = useState(null);
+  const [docCameraTarget, setDocCameraTarget] = useState("");
+
+  const getDocLabel = (docKey) =>
+    docKey === "license" ? "License" : docKey === "insurance" ? "Insurance" : "RC";
 
   useEffect(() => {
     setForm({
@@ -6713,17 +7150,162 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       platform: worker.platform || "Swiggy",
       hours: worker.hours || "8-10 hrs/day",
       vehicle: worker.vehicle || "Motorbike / Scooter",
+      vehicleNumber: worker.vehicleNumber || "",
       city: worker.city || "Hyderabad",
       zone: worker.zone || getRegistrationZones(worker.city || "Hyderabad")[0],
+      liveTrackingEnabled: Boolean(worker.liveTrackingEnabled),
       password: "",
       confirmPassword: "",
     });
+    setProfilePhoto(worker.photoURL || worker.selfieImage || "");
+    setVehicleDocs(worker.vehicleDocs || {});
   }, [worker]);
+
+  useEffect(() => () => {
+    if (docCameraStreamRef.current) {
+      docCameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      docCameraStreamRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!editing && docCameraOpen) {
+      stopDocCamera();
+    }
+  }, [editing, docCameraOpen]);
 
   const zoneOptions = getRegistrationZones(form.city);
   const platformOptions = Array.from(new Set([form.platform, ...REG_PLATFORM_OPTIONS].filter(Boolean)));
   const hourOptions = Array.from(new Set([form.hours, ...REG_HOUR_OPTIONS].filter(Boolean)));
   const vehicleOptions = Array.from(new Set([form.vehicle, ...VEHICLES.map((item) => item.name)].filter(Boolean)));
+
+  const stopDocCamera = () => {
+    if (docCameraStreamRef.current) {
+      docCameraStreamRef.current.getTracks().forEach((track) => track.stop());
+      docCameraStreamRef.current = null;
+    }
+    if (docCameraVideoRef.current) {
+      docCameraVideoRef.current.srcObject = null;
+    }
+    setDocCameraOpen(false);
+    setDocCameraError("");
+    setDocCameraTarget("");
+    setDocCameraGeo(null);
+  };
+
+  const fetchCaptureGeo = async () => {
+    if (!navigator.geolocation?.getCurrentPosition) return null;
+    return await new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            lat: Number(position.coords.latitude.toFixed(6)),
+            lng: Number(position.coords.longitude.toFixed(6)),
+            accuracy: Math.round(position.coords.accuracy || 0),
+            capturedAt: new Date().toISOString(),
+          });
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+      );
+    });
+  };
+
+  const openDocCameraFor = async (docKey) => {
+    setDocCameraError("");
+    setDocCameraTarget(docKey);
+    setDocCameraOpen(true);
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera API unavailable. Use upload option.");
+      }
+      const geo = await fetchCaptureGeo();
+      setDocCameraGeo(geo);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      docCameraStreamRef.current = stream;
+      const video = docCameraVideoRef.current;
+      if (!video) throw new Error("Camera preview not available.");
+      video.srcObject = stream;
+      await video.play().catch(() => { });
+    } catch (error) {
+      setDocCameraError(error?.message || "Could not open camera.");
+      setDocCameraOpen(false);
+    }
+  };
+
+  const captureDocFromCamera = () => {
+    const video = docCameraVideoRef.current;
+    const canvas = docCameraCanvasRef.current;
+    if (!video || !canvas || !docCameraTarget) return;
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, width, height);
+
+    const timestamp = new Date().toLocaleString("en-IN");
+    const geoText = docCameraGeo
+      ? `Lat ${docCameraGeo.lat} | Lng ${docCameraGeo.lng} | Acc ${docCameraGeo.accuracy}m`
+      : "GPS unavailable";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(0, height - 95, width, 95);
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.arc(22, height - 70, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 17px Arial";
+    ctx.fillText("GEO TAGGED CAPTURE", 38, height - 64);
+    ctx.font = "14px Arial";
+    ctx.fillText(geoText, 16, height - 38);
+    ctx.fillText(timestamp, 16, height - 16);
+
+    const imageData = canvas.toDataURL("image/jpeg", 0.92);
+    const uploadedAtIso = new Date().toISOString();
+    setVehicleDocs((prev) => ({
+      ...prev,
+      [docCameraTarget]: {
+        name: `${docCameraTarget}-gps-${Date.now()}.jpg`,
+        type: "image/jpeg",
+        uploadedAt: uploadedAtIso,
+        url: imageData,
+        geo: docCameraGeo || null,
+        source: "camera_gps"
+      }
+    }));
+    setMsg(`${getDocLabel(docCameraTarget)} captured with camera and GPS tag.`);
+    setErr("");
+    stopDocCamera();
+  };
+
+  const handleDocUpload = (docKey, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      if (!dataUrl) return;
+      setVehicleDocs((prev) => ({
+        ...prev,
+        [docKey]: {
+          name: file.name,
+          type: file.type,
+          uploadedAt: new Date().toISOString(),
+          url: dataUrl,
+          geo: null,
+          source: "upload"
+        }
+      }));
+      setMsg(`${getDocLabel(docKey)} document uploaded.`);
+      setErr("");
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSendEmailOtp = async () => {
     setShowOtpBox(true);
@@ -6739,16 +7321,19 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
         throw new Error("A valid 10-digit phone number is required for OTP verification.");
       }
 
-      if (!profileRecaptchaVerifierRef.current) {
-        if (!profileOtpRecaptchaRef.current) {
-          throw new Error("OTP verifier not ready. Reopen Edit Profile and try again.");
-        }
-        profileRecaptchaVerifierRef.current = new RecaptchaVerifier(auth, profileOtpRecaptchaRef.current, {
-          size: "invisible",
-          callback: () => { }
-        });
-        await profileRecaptchaVerifierRef.current.render();
+      if (!profileOtpRecaptchaRef.current) {
+        throw new Error("OTP verifier not ready. Reopen Edit Profile and try again.");
       }
+      if (profileRecaptchaVerifierRef.current) {
+        try { profileRecaptchaVerifierRef.current.clear(); } catch (error) { }
+        profileRecaptchaVerifierRef.current = null;
+      }
+      profileOtpRecaptchaRef.current.innerHTML = "";
+      profileRecaptchaVerifierRef.current = new RecaptchaVerifier(auth, profileOtpRecaptchaRef.current, {
+        size: "invisible",
+        callback: () => { }
+      });
+      await profileRecaptchaVerifierRef.current.render();
 
       setOtpBusy(true);
       const confirmation = await linkWithPhoneNumber(auth.currentUser, `+91${phoneDigits}`, profileRecaptchaVerifierRef.current);
@@ -6761,10 +7346,8 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
         setMsg("Phone is already verified on this account.");
       } else if (code === "auth/too-many-requests") {
         setErr("Too many OTP requests. Please wait and try again.");
-      } else if (code === "auth/captcha-check-failed") {
-        setErr("Captcha check failed. Please retry OTP.");
       } else {
-        setErr(error?.message || "Could not send OTP.");
+        setErr(getFirebaseAuthErrorMessage(error, "Could not send OTP."));
       }
     } finally {
       setOtpBusy(false);
@@ -6803,6 +7386,7 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       const updatedUsername = normalizeUsernameKey(form.username);
       const updatedEmail = form.email.trim().toLowerCase();
       const updatedZone = zoneOptions.includes(form.zone) ? form.zone : zoneOptions[0];
+      const updatedVehicleNumber = String(form.vehicleNumber || "").toUpperCase().replace(/\s+/g, "");
       const emailChanged = updatedEmail && updatedEmail !== (worker.email || "").toLowerCase();
       const usernameChanged = updatedUsername !== normalizeUsernameKey(worker.username || "");
       const nameChanged = updatedName !== (worker.name || "");
@@ -6815,6 +7399,9 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
 
       if (!updatedName || !updatedUsername || !updatedEmail) {
         throw new Error("Name, username, and email are required.");
+      }
+      if (updatedVehicleNumber && !/^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/.test(updatedVehicleNumber)) {
+        throw new Error("Vehicle number format is invalid. Use format like TS09AB1234.");
       }
 
       if (emailChanged && !otpVerified) {
@@ -6834,9 +7421,13 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
         platform: form.platform,
         hours: form.hours,
         vehicle: form.vehicle,
+        vehicleNumber: updatedVehicleNumber,
         city: form.city,
         zone: updatedZone,
-        avatar: updatedName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase() || "").join("") || worker.avatar
+        liveTrackingEnabled: Boolean(form.liveTrackingEnabled),
+        avatar: updatedName.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase() || "").join("") || worker.avatar,
+        photoURL: profilePhoto || worker.photoURL || "",
+        vehicleDocs
       };
       onWorkerUpdate(nextWorker);
       saveUsernameEmailIndexEntry(updatedUsername, updatedEmail);
@@ -6895,12 +7486,12 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
     try {
       if (auth.currentUser) {
         const uid = auth.currentUser.uid;
-        await deleteUser(auth.currentUser);
-        await deleteDoc(doc(db, "users", uid)).catch(() => { });
-        const claimSnap = await getDocs(query(collection(db, "claims"), where("userId", "==", uid))).catch(() => null);
+        const claimSnap = await getDocs(query(collection(db, "claims"), where("userId", "==", uid)));
         if (claimSnap?.docs?.length) {
-          await Promise.all(claimSnap.docs.map((claimDoc) => deleteDoc(doc(db, "claims", claimDoc.id)).catch(() => { })));
+          await Promise.all(claimSnap.docs.map((claimDoc) => deleteDoc(doc(db, "claims", claimDoc.id))));
         }
+        await deleteDoc(doc(db, "users", uid));
+        await deleteUser(auth.currentUser);
         cleanupLocal(uid);
       } else {
         cleanupLocal("");
@@ -6926,7 +7517,11 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
   return (
     <div className="tab-screen">
       <div className="profile-hero">
-        <div className="ph-avatar">{worker.avatar}</div>
+        {worker.photoURL ? (
+          <img src={worker.photoURL} alt="Profile" className="ph-avatar" style={{ objectFit: "cover" }} />
+        ) : (
+          <div className="ph-avatar">{worker.avatar}</div>
+        )}
         <h2 className="ph-name">{localizeTerm(language, worker.name)}</h2>
         <div className="ph-meta">{localizeTerm(language, worker.platform)} · {localizeTerm(language, worker.city)}</div>
         <div className="ph-tag" style={{ color: worker.tagColor, borderColor: worker.tagColor }}>{localizeTerm(language, worker.tag)}</div>
@@ -6988,6 +7583,106 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
                 {vehicleOptions.map((vehicleLabel) => <option key={vehicleLabel}>{vehicleLabel}</option>)}
               </select>
             </div>
+            <div className="field">
+              <label>Vehicle Number</label>
+              <input
+                placeholder="e.g. TS09AB1234"
+                value={form.vehicleNumber}
+                onChange={(e) => setForm({ ...form, vehicleNumber: e.target.value.toUpperCase().replace(/\s+/g, "") })}
+              />
+            </div>
+            <div className="field">
+              <label>Live GPS Tracking</label>
+              <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: "var(--muted)" }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.liveTrackingEnabled)}
+                  onChange={(e) => setForm({ ...form, liveTrackingEnabled: e.target.checked })}
+                />
+                <span>Track live location in-app while account is active to reduce false claims.</span>
+              </label>
+            </div>
+            <div className="field">
+              <label>Vehicle Documents (in-app access)</label>
+              <div style={{ display: "grid", gap: 8 }}>
+                {["license", "insurance", "rc"].map((docKey) => (
+                  <div key={docKey} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      style={{ marginBottom: 0, padding: "10px 12px" }}
+                      onClick={() => openDocCameraFor(docKey)}
+                    >
+                      Capture {getDocLabel(docKey)}
+                    </button>
+                    <label className="btn-outline" style={{ marginBottom: 0, padding: "10px 12px", cursor: "pointer" }}>
+                      Upload {getDocLabel(docKey)}
+                      <input type="file" accept="image/*,.pdf" capture="environment" style={{ display: "none" }} onChange={(e) => handleDocUpload(docKey, e)} />
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {docCameraOpen && (
+                <div style={{ marginTop: 10, padding: 10, border: "1px solid var(--border)", borderRadius: 10, background: "var(--bg3)" }}>
+                  <div style={{ fontSize: 12, color: "var(--text)", fontWeight: 700, marginBottom: 8 }}>
+                    GPS Camera - {getDocLabel(docCameraTarget || "license")}
+                  </div>
+                  <video
+                    ref={docCameraVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{ width: "100%", minHeight: 180, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)", marginBottom: 8, background: "#0b1020" }}
+                  />
+                  <canvas ref={docCameraCanvasRef} style={{ display: "none" }} />
+                  {docCameraGeo && (
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8 }}>
+                      Lat {docCameraGeo.lat}, Lng {docCameraGeo.lng}, Acc {docCameraGeo.accuracy}m
+                    </div>
+                  )}
+                  {docCameraError && <div style={{ color: "#EF4444", fontSize: 11, marginBottom: 8 }}>{docCameraError}</div>}
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <button type="button" className="btn-primary" style={{ padding: "10px 12px", fontSize: 12 }} onClick={captureDocFromCamera}>
+                      Capture With GPS Tag
+                    </button>
+                    <button type="button" className="btn-outline" style={{ padding: "10px 12px", fontSize: 12 }} onClick={stopDocCamera}>
+                      Close Camera
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 8, lineHeight: 1.5 }}>
+                {["license", "insurance", "rc"].map((key) => {
+                  const docItem = vehicleDocs?.[key];
+                  if (!docItem?.url) return null;
+                  return (
+                    <div key={key} style={{ marginBottom: 4 }}>
+                      {key.toUpperCase()}: <a href={docItem.url} target="_blank" rel="noreferrer" style={{ color: "var(--rain)" }}>{docItem.name || "View"}</a>
+                      {docItem?.geo?.lat ? (
+                        <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                          Geo: {docItem.geo.lat}, {docItem.geo.lng} ({docItem.geo.accuracy || 0}m)
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="field"><label>Profile Photo</label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <label className="btn-outline" style={{ marginBottom: 0, padding: "10px 12px", cursor: "pointer" }}>
+                  Upload Photo
+                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => setProfilePhoto(String(reader.result || ""));
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+                {profilePhoto && <img src={profilePhoto} alt="Preview" style={{ width: 48, height: 48, borderRadius: 12, objectFit: "cover", border: "1px solid var(--border)" }} />}
+              </div>
+            </div>
             <div className="field"><label>New Password (optional)</label><input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Minimum 6 characters" /></div>
             <div className="field"><label>Confirm New Password</label><input type="password" value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} /></div>
             <button className="btn-primary" onClick={handleSave} disabled={busy}>{busy ? "Saving..." : "Save Changes"}</button>
@@ -7003,8 +7698,10 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
           <div className="detail-row"><span>{localizeTerm(language, "Platform")}</span><span>{localizeTerm(language, worker.platform)}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "Work hours")}</span><span>{localizeTerm(language, worker.hours || "8-10 hrs/day")}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "Vehicle")}</span><span>{localizeTerm(language, worker.vehicle || "Motorbike / Scooter")}</span></div>
+          <div className="detail-row"><span>Vehicle Number</span><span>{worker.vehicleNumber || "-"}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "City")}</span><span>{localizeTerm(language, worker.city)}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "Zone")}</span><span>{localizeTerm(language, worker.zone)}</span></div>
+          <div className="detail-row"><span>Live Tracking</span><span>{worker.liveTrackingEnabled ? "Enabled" : "Disabled"}</span></div>
         </div>
       </div>
       <div className="profile-section"><div className="ps-title">{translate(language, "currentPlanSection", "Current Plan")}</div>
@@ -7013,6 +7710,40 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
           <div className="detail-row"><span>{translate(language, "weeklyPremium", "Weekly premium")}</span><span>{formatMoney(activeWeeklyPremium, language)}</span></div>
           <div className="detail-row"><span>{translate(language, "coverageAmount", "Coverage amount")}</span><span>₹{plan.coverage.toLocaleString()}</span></div>
           <div className="detail-row"><span>{localizeTerm(language, "Status")}</span><span className="safe-badge">{worker.accountPaused ? "Paused" : `${localizeTerm(language, "Active")} ✓`}</span></div>
+        </div>
+      </div>
+      <div className="profile-section">
+        <div className="ps-title">Vehicle Docs</div>
+        <div className="profile-card">
+          {["license", "insurance", "rc"].every((key) => !worker?.vehicleDocs?.[key]?.url) && (
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>No documents uploaded yet. Open Edit Profile to upload.</div>
+          )}
+          {["license", "insurance", "rc"].map((key) => {
+            const docItem = worker?.vehicleDocs?.[key];
+            if (!docItem?.url) return null;
+            return (
+              <div key={key} className="detail-row">
+                <span>
+                  {key.toUpperCase()}
+                  {docItem?.geo?.lat ? (
+                    <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                      {docItem.geo.lat}, {docItem.geo.lng}
+                    </div>
+                  ) : null}
+                </span>
+                <span style={{ textAlign: "right" }}>
+                  <a href={docItem.url} target="_blank" rel="noreferrer" style={{ color: "var(--rain)" }}>
+                    {docItem.name || "View document"}
+                  </a>
+                  {docItem?.uploadedAt ? (
+                    <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                      {new Date(docItem.uploadedAt).toLocaleString("en-IN")}
+                    </div>
+                  ) : null}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div className="profile-section"><div className="ps-title">{translate(language, "accountStatistics", "Account Statistics")}</div>
@@ -7024,14 +7755,21 @@ function ProfileTab({ worker, balance, history, onWorkerUpdate, onLogout, langua
       </div>
       <div className="profile-section"><div className="ps-title">{translate(language, "aiRiskProfile", "AI Risk Profile")}</div>
         <div className="profile-card">
-          {worker.signals.map((s, i) => (
-            <div key={i} className="detail-row">
-              <span>{localizeTerm(language, s.signal)}</span>
-              <span style={{ color: s.status === "pass" ? "#22c55e" : s.status === "warn" ? "#F97316" : "#EF4444", fontSize: 12 }}>
-                {s.status === "pass" ? translate(language, "clean", "✓ Clean") : s.status === "warn" ? translate(language, "watch", "⚠ Watch") : translate(language, "flagged", "✕ Flagged")}
-              </span>
+          {(Array.isArray(worker?.signals) && worker.signals.length > 0) ? (
+            worker.signals.map((s, i) => (
+              <div key={i} className="detail-row">
+                <span>{localizeTerm(language, s.signal)}</span>
+                <span style={{ color: s.status === "pass" ? "#22c55e" : s.status === "warn" ? "#F97316" : "#EF4444", fontSize: 12 }}>
+                  {s.status === "pass" ? translate(language, "clean", "✓ Clean") : s.status === "warn" ? translate(language, "watch", "⚠ Watch") : translate(language, "flagged", "✕ Flagged")}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="detail-row" style={{ color: "var(--muted)" }}>
+              <span>{translate(language, "noSignals", "No AI risk signals available.")}</span>
+              <span>{translate(language, "notAvailable", "N/A")}</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -7076,9 +7814,31 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
   const [locationConsent, setLocationConsent] = useState(isDemoSimulation);
   const [kycConsent, setKycConsent] = useState(isDemoSimulation);
   const [dataConsent, setDataConsent] = useState(isDemoSimulation);
+  const [evidenceImage, setEvidenceImage] = useState(seedMeta?.evidenceImage || "");
+  const [vehicleNumberInput, setVehicleNumberInput] = useState(worker?.vehicleNumber || "");
+  const [idProofLast4, setIdProofLast4] = useState("");
   const [claimError, setClaimError] = useState("");
   const [gpsStatus, setGpsStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const evidenceInputRef = useRef(null);
+  const requiresExpedite = maturityGate.status !== "normal";
+
+  const vehicleNumberLooksValid = /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/i.test(String(vehicleNumberInput || "").replace(/\s+/g, ""));
+  const idLast4LooksValid = /^\d{4}$/.test(String(idProofLast4 || "").trim());
+  const expediteVerificationReady = vehicleNumberLooksValid && idLast4LooksValid;
+
+  const handleEvidencePicked = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const imageData = String(reader.result || "");
+      if (!imageData) return;
+      setEvidenceImage(imageData);
+      setClaimError("");
+    };
+    reader.readAsDataURL(file);
+  };
 
   const submitClaim = () => {
     setClaimError("");
@@ -7090,6 +7850,14 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
       setClaimError("Please accept all claim consents before submitting.");
       return;
     }
+    if (!evidenceImage && !isDemoSimulation) {
+      setClaimError("Attach a geotagged claim photo before submitting.");
+      return;
+    }
+    if (requiresExpedite && !expediteVerificationReady && !isDemoSimulation) {
+      setClaimError("For new accounts, enter vehicle number and ID last 4 digits for quick verification.");
+      return;
+    }
     const capturedAt = new Date().toISOString();
     setSubmitting(true);
     if (!navigator.geolocation) {
@@ -7098,6 +7866,13 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
         gps: null,
         gpsError: "not_supported",
         capturedAt,
+        evidenceImage,
+        expedite: {
+          requested: requiresExpedite,
+          verified: expediteVerificationReady,
+          vehicleNumber: vehicleNumberInput.toUpperCase(),
+          idLast4: idProofLast4
+        },
         consent: { location: true, kyc: true, dataShare: true },
         simulated: isDemoSimulation
       });
@@ -7117,6 +7892,13 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
           gps,
           gpsError: "",
           capturedAt,
+          evidenceImage,
+          expedite: {
+            requested: requiresExpedite,
+            verified: expediteVerificationReady,
+            vehicleNumber: vehicleNumberInput.toUpperCase(),
+            idLast4: idProofLast4
+          },
           consent: { location: true, kyc: true, dataShare: true },
           simulated: isDemoSimulation
         });
@@ -7128,6 +7910,13 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
           gps: null,
           gpsError: error?.message || "gps_error",
           capturedAt,
+          evidenceImage,
+          expedite: {
+            requested: requiresExpedite,
+            verified: expediteVerificationReady,
+            vehicleNumber: vehicleNumberInput.toUpperCase(),
+            idLast4: idProofLast4
+          },
           consent: { location: true, kyc: true, dataShare: true },
           simulated: isDemoSimulation
         });
@@ -7165,6 +7954,61 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
             ? "Account age 7-30 days -> delayed verification queue."
             : "Account age 30+ days -> normal decision flow."}
       </div>
+      <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px", marginBottom: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+        <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Claim Evidence (Required)</div>
+        <div style={{ marginBottom: 8 }}>Capture a live photo from claim location. We store it with GPS + timestamp for fraud review.</div>
+        {evidenceImage ? (
+          <img
+            src={evidenceImage}
+            alt="Claim evidence"
+            style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: 10, border: "1px solid var(--border)", marginBottom: 8 }}
+          />
+        ) : null}
+        <input
+          ref={evidenceInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: "none" }}
+          onChange={handleEvidencePicked}
+        />
+        <button
+          type="button"
+          className="btn-outline"
+          style={{ width: "100%", marginBottom: 6 }}
+          onClick={() => evidenceInputRef.current?.click()}
+        >
+          {evidenceImage ? "Retake Claim Photo" : "Capture Claim Photo"}
+        </button>
+      </div>
+      {requiresExpedite && (
+        <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px", marginBottom: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Fast Verification For New Accounts</div>
+          <div style={{ marginBottom: 8 }}>
+            Add vehicle number + ID last 4 digits to reduce delay for genuine first-time workers.
+          </div>
+          <div className="field" style={{ marginBottom: 8 }}>
+            <label>Vehicle number</label>
+            <input
+              placeholder="e.g. TS09AB1234"
+              value={vehicleNumberInput}
+              onChange={(e) => setVehicleNumberInput(e.target.value.toUpperCase().replace(/\s+/g, ""))}
+            />
+          </div>
+          <div className="field" style={{ marginBottom: 8 }}>
+            <label>ID last 4 digits</label>
+            <input
+              placeholder="1234"
+              value={idProofLast4}
+              maxLength={4}
+              onChange={(e) => setIdProofLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            />
+          </div>
+          <div style={{ color: expediteVerificationReady ? "#22c55e" : "#F97316" }}>
+            {expediteVerificationReady ? "Quick verification data ready." : "Enter valid details to unlock fast verification."}
+          </div>
+        </div>
+      )}
       <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px", marginBottom: 12, fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
         <div style={{ fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>IRDAI / DPDP Claim Consent</div>
         <label style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
@@ -7298,6 +8142,3 @@ function QueuedScreen({ disruption, onDone }) {
     </div>
   );
 }
-
-
-
