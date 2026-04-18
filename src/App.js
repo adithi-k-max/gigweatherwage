@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import "./App.css";
 import { PLANS, DISRUPTIONS, PERSONAS, WEATHER_FORECAST } from "./data";
 import { auth, db } from "./firebase";
@@ -7875,7 +7875,6 @@ function ClaimScreen({ disruption, worker, online, seedMeta, onProceed, onBack }
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setClaimGps({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           setGpsStatus(`GPS Tagged: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`);
         },
         () => {
